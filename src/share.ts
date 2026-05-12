@@ -23,7 +23,17 @@ async function tryDpaste(content: string): Promise<string | null> {
   return (await res.text()).trim();
 }
 
+const DPASTE_LIMIT = 750 * 1024; // ~750KB raw — dpaste.com rejects above this
+
 export async function shareContent(content: string): Promise<string> {
+  const bytes = Buffer.byteLength(content, 'utf8');
+  if (bytes > DPASTE_LIMIT) {
+    const kb = Math.round(bytes / 1024);
+    throw new Error(
+      `Content too large to share (${kb}KB, limit ~750KB). Use --max-tokens to reduce output size.`,
+    );
+  }
+
   const sp = spinner('Uploading...');
 
   let url = await tryPasteRs(content);
