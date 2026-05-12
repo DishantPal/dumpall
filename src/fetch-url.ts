@@ -145,9 +145,22 @@ export async function fetchUrlGlob(
   }
   sitemapSp.done(`Found ${locs.length} URLs in sitemap`);
 
-  // Filter locs using picomatch against the glob pattern
-  const isMatch = picomatch(pattern, { dot: true });
-  const matched = locs.filter(loc => isMatch(loc));
+  // Match by path only — picomatch chokes on :// in full URLs.
+  // Also normalize www vs non-www so patterns without www match sitemap URLs with www and vice versa.
+  const patternPath = pattern.replace(/^https?:\/\/[^/]+/, ''); // e.g. /resources/*
+  const patternHost = domain.replace(/^https?:\/\/(www\.)?/, ''); // e.g. parkingmd.com
+  const pathMatcher = picomatch(patternPath || '/**', { dot: true });
+
+  const matched = locs.filter(loc => {
+    try {
+      const u = new URL(loc);
+      const locHost = u.hostname.replace(/^www\./, '');
+      if (locHost !== patternHost) return false;
+      return pathMatcher(u.pathname);
+    } catch {
+      return false;
+    }
+  });
 
   const toFetch = matched.slice(0, maxPages);
   const total = toFetch.length;
