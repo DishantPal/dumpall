@@ -1,24 +1,36 @@
 {
   "name": "dumpall",
-  "version": "1.0.4",
-  "description": "A CLI utility to display the contents of files in a directory, formatted in Markdown for AI context.",
-  "main": "dumpall",
-  "bin": {
-    "dumpall": "dumpall"
+  "version": "2.0.0",
+  "description": "The universal context compiler. Everything into one document. Instantly.",
+  "type": "module",
+  "bin": { "dumpall": "dist/cli.js" },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build"
   },
-  "files": [
-    "dumpall",
-    "README.md"
-  ],
+  "engines": { "node": ">=18.0.0" },
+  "license": "MIT",
+  "dependencies": {
+    "citty": "^0.1.6",
+    "clipboardy": "^4.0.0",
+    "picomatch": "^4.0.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/picomatch": "^2.3.4",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ThisIsntMyId/dumpall.git"
   },
   "keywords": [
     "cli",
-    "shell",
-    "utility",
-    "dump",
+    "typescript",
     "context",
     "llm",
     "ai",
@@ -27,12 +39,8 @@
     "file-concatenation"
   ],
   "author": "Dishant Pal <dishantpal37@gmail.com>",
-  "license": "MIT",
   "bugs": {
     "url": "https://github.com/ThisIsntMyId/dumpall/issues"
   },
-  "homepage": "https://dumpall.pages.dev",
-  "engines": {
-    "node": ">=10.0.0"
-  }
+  "homepage": "https://dumpall.pages.dev"
 }

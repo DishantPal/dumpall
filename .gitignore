@@ -1,6 +1,7 @@
 node_modules/
 *.log
 .DS_Store
+dist/
 
 # Reference screenshots — design artifacts, not source code
 ref/
