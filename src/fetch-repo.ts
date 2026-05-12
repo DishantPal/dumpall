@@ -103,21 +103,31 @@ function getZipUrl(parsed: RepoParsed, ref: string): string {
 }
 
 function getCachePath(parsed: RepoParsed, ref: string): string {
-  const cacheDir = path.join(os.homedir(), '.cache', 'dumpall', 'repos', parsed.host, parsed.owner, parsed.repo);
+  const baseDir = process.env['DUMPALL_CACHE_DIR'] ?? path.join(os.homedir(), '.cache', 'dumpall');
+  const cacheDir = path.join(baseDir, 'repos', parsed.host, parsed.owner, parsed.repo);
   fs.mkdirSync(cacheDir, { recursive: true });
   return path.join(cacheDir, `${ref}.zip`);
 }
 
-function isCacheValid(cachePath: string, isImmutable: boolean): boolean {
+function isCacheValid(cachePath: string, isImmutable: boolean, ttlMs?: number): boolean {
   try {
     const stat = fs.statSync(cachePath);
     if (isImmutable) return true;
-    // Branch: 1-hour TTL
-    const ONE_HOUR = 60 * 60 * 1000;
-    return Date.now() - stat.mtimeMs < ONE_HOUR;
+    const effectiveTtl = ttlMs ?? 60 * 60 * 1000; // default 1h
+    if (effectiveTtl === 0) return false; // always fresh
+    return Date.now() - stat.mtimeMs < effectiveTtl;
   } catch {
     return false;
   }
+}
+
+export function parseDuration(dur: string): number {
+  if (dur === '0') return 0;
+  const mMatch = dur.match(/^(\d+(?:\.\d+)?)m$/);
+  if (mMatch) return Math.floor(parseFloat(mMatch[1]) * 60 * 1000);
+  const hMatch = dur.match(/^(\d+(?:\.\d+)?)h$/);
+  if (hMatch) return Math.floor(parseFloat(hMatch[1]) * 60 * 60 * 1000);
+  throw new Error(`Invalid duration: ${dur}. Use format like 1h, 30m, or 0`);
 }
 
 function isImmutableRef(ref: string): boolean {
@@ -128,11 +138,37 @@ function isImmutableRef(ref: string): boolean {
   return false;
 }
 
-async function downloadZip(url: string, destPath: string, host: string): Promise<void> {
+async function checkGhCli(): Promise<boolean> {
+  try {
+    const { execSync } = await import('node:child_process');
+    execSync('gh auth status', { stdio: 'ignore' });
+    return true;
+  } catch { return false; }
+}
+
+async function downloadViaGhCli(parsed: RepoParsed, ref: string, destPath: string): Promise<void> {
+  const { execSync } = await import('node:child_process');
+  const output = execSync(
+    `gh api repos/${parsed.owner}/${parsed.repo}/zipball/${ref}`,
+    { stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 200 * 1024 * 1024 },
+  );
+  fs.writeFileSync(destPath, output);
+}
+
+async function downloadZip(url: string, destPath: string, parsed: RepoParsed, ref: string): Promise<void> {
+  const host = parsed.host;
   const token = getToken(host);
   let res = await fetchWithAuth(url, token);
 
   if ((res.status === 401 || res.status === 404) && !token) {
+    // Try gh CLI fallback for GitHub only
+    if (host === 'github.com') {
+      const ghAvailable = await checkGhCli();
+      if (ghAvailable) {
+        await downloadViaGhCli(parsed, ref, destPath);
+        return;
+      }
+    }
     throw new Error(
       `Repo not found or private. Set GITHUB_TOKEN (or GITLAB_TOKEN/BITBUCKET_TOKEN) or run 'gh auth login'.`,
     );
@@ -164,6 +200,7 @@ export async function fetchRepo(
   arg: string,
   collectOpts: CollectOptions,
   noCache = false,
+  ttlMs?: number,
 ): Promise<FileEntry[]> {
   const parsed = parseRepoUrl(arg);
 
@@ -174,11 +211,11 @@ export async function fetchRepo(
   const cachePath = getCachePath(parsed, ref);
   const immutable = isImmutableRef(ref);
 
-  const needDownload = noCache || !isCacheValid(cachePath, immutable);
+  const needDownload = noCache || !isCacheValid(cachePath, immutable, ttlMs);
 
   if (needDownload) {
     sp.update(`Downloading ${parsed.owner}/${parsed.repo}@${ref}...`);
-    await downloadZip(zipUrl, cachePath, parsed.host);
+    await downloadZip(zipUrl, cachePath, parsed, ref);
     sp.update(`Extracting ${parsed.owner}/${parsed.repo}...`);
   } else {
     sp.update(`Extracting ${parsed.owner}/${parsed.repo} (cached)...`);

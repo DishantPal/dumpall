@@ -3,7 +3,7 @@ import path from 'node:path';
 import picomatch from 'picomatch';
 import { getLang } from './lang.js';
 import { isUrl, isUrlGlob, fetchUrl, fetchUrlGlob } from './fetch-url.js';
-import { isRepoUrl, fetchRepo } from './fetch-repo.js';
+import { isRepoUrl, fetchRepo, parseDuration } from './fetch-repo.js';
 
 export interface FileEntry {
   path: string;
@@ -18,6 +18,7 @@ export interface CollectOptions {
   maxFileSize?: number;
   followSymlinks?: boolean;
   strict?: boolean;
+  cacheTtl?: string;
 }
 
 const ALWAYS_SKIP_DIRS = new Set(['.git', 'node_modules']);
@@ -223,7 +224,8 @@ export async function collectAsync(
   for (const src of sources) {
     if (isRepoUrl(src)) {
       try {
-        const entries = await fetchRepo(src, opts, opts.noCache);
+        const ttlMs = opts.cacheTtl ? parseDuration(opts.cacheTtl) : undefined;
+        const entries = await fetchRepo(src, opts, opts.noCache, ttlMs);
         results.push(...entries);
       } catch (e) {
         if (opts.strict) throw e;
