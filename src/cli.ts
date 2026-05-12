@@ -157,6 +157,13 @@ if (pickerSource !== null) {
   process.argv.splice(2, rawArgv.length, ...cleanedArgv);
 }
 
+// No sources and no --stdin → show citty's built-in help
+const hasSource = cleanedArgv.some(a => !a.startsWith('-'));
+const hasStdinFlag = cleanedArgv.includes('--stdin');
+if (pickerSource === null && !hasSource && !hasStdinFlag) {
+  process.argv.splice(2, process.argv.length - 2, '--help');
+}
+
 async function run(args: Record<string, unknown>) {
   // ── --install-completions ──────────────────────────────────────────────────
   if (args['install-completions']) {
@@ -241,11 +248,6 @@ async function run(args: Record<string, unknown>) {
     await renderAndOutput(entries, args, outputFormat, noteText);
     process.exit(hadWarnings ? 1 : 0);
     return;
-  }
-
-  if (sources.length === 0 && !args.stdin) {
-    process.stdout.write(getHelp());
-    process.exit(0);
   }
 
   const entries = sources.length > 0 ? await collectAsync(sources, collectOpts) : [];
@@ -343,58 +345,6 @@ function applyTokenBudget(entries: FileEntry[], budget: number): void {
       entries.splice(i, 1);
     }
   }
-}
-
-function getHelp(): string {
-  return `dumpall v${VERSION} — The universal context compiler
-
-USAGE
-  dumpall [sources...] [flags]
-
-SOURCES
-  Local paths, URLs (http/https), repo slugs (github.com/owner/repo[@ref][/glob])
-
-FLAGS
-  -c, --clip              Copy to clipboard
-  -o, --out <file>        Write to file
-  -m, --note [text]       Prepend message/prompt to output (omit value for interactive)
-  -e, --exclude <pattern> Exclude glob pattern (repeatable)
-  --grep <pattern>        Only files containing pattern (repeatable)
-  --tree                  Prepend directory tree to output
-  --tree-only             Output only directory tree
-  --tokens                Show token count estimate
-  --max-tokens <n>        Truncate to fit token budget (drop largest files first)
-  --max-file-size <s>     Skip files larger than size (default: 1MB)
-  --max-pages <n>         Max pages to fetch when using URL globs (default: 50)
-  --format <fmt>          Output format: md (default), xml, json
-  --stdin                 Read sources from stdin (one per line)
-  --qr                    Display output as QR code
-  --follow-symlinks       Follow symlinks during traversal
-  --strict                Abort on any error instead of skipping
-  --no-cache              Bypass cache for remote fetching
-  --cache-ttl <dur>       Cache TTL for branch refs (e.g. 1h, 30m, 0)
-  --install-completions   Install shell completions (bash/zsh/fish)
-  -v, --version           Show version
-  -h, --help              Show help
-
-ENVIRONMENT VARIABLES
-  DUMPALL_MAX_PAGES       Default for --max-pages
-  DUMPALL_FORMAT          Default for --format
-  DUMPALL_CACHE_DIR       Override ~/.cache/dumpall cache directory
-  DUMPALL_CLIP_CMD        Legacy (bash v1 only); no-op in v2
-
-EXAMPLES
-  dumpall src/
-  dumpall . --tree --format xml
-  dumpall src/ -c --tokens
-  dumpall . --exclude "*.test.ts" --grep "TODO"
-  find . -name "*.ts" | dumpall --stdin
-  dumpall https://example.com
-  dumpall "https://docs.react.dev/**"
-  dumpall github.com/sindresorhus/is
-  dumpall github.com/owner/repo@main/src/**
-  dumpall src/ @
-`;
 }
 
 runMain(main);
