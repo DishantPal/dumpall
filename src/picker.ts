@@ -191,8 +191,9 @@ function listFilesRecursive(dir: string, base: string, results: string[] = []): 
 
 // ── Public API ────────────────────────────────────────────────────────────────
 export async function runPicker(source: string, collectOpts: CollectOptions): Promise<FileEntry[]> {
-  if (source.startsWith('http://') || source.startsWith('https://')) {
-    process.stderr.write(`Error: @ does not support URL sources. Use a local path or a repo slug (github.com/owner/repo @).\n`);
+  // Must check isRepoUrl first — https://github.com/... is a valid picker source
+  if (!isRepoUrl(source) && (source.startsWith('http://') || source.startsWith('https://'))) {
+    process.stderr.write(`Error: @ does not support plain URL sources. Use a local path or a repo URL (github.com/owner/repo @).\n`);
     process.exit(1);
   }
 

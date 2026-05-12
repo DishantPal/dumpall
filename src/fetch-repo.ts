@@ -19,12 +19,17 @@ export interface RepoParsed {
 
 const REPO_PATTERN = /^(github\.com|gitlab\.com|bitbucket\.org)\/([^/\s@]+)\/([^/\s@]+)(?:@([^\s/]+))?(\/.*)?$/;
 
+function normalizeRepoArg(arg: string): string {
+  return arg.replace(/^https?:\/\//, '');
+}
+
 export function isRepoUrl(arg: string): boolean {
-  return REPO_PATTERN.test(arg);
+  return REPO_PATTERN.test(normalizeRepoArg(arg));
 }
 
 export function parseRepoUrl(arg: string): RepoParsed {
-  const m = arg.match(REPO_PATTERN);
+  const normalized = normalizeRepoArg(arg);
+  const m = normalized.match(REPO_PATTERN);
   if (!m) throw new Error(`Not a repo URL: ${arg}`);
 
   const host = m[1] as RepoParsed['host'];

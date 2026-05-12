@@ -218,38 +218,29 @@ export async function collectAsync(
   const localSources = sources.filter(s => !isUrl(s) && !isRepoUrl(s));
   results.push(...collect(localSources, opts));
 
-  // Then handle remote sources
+  // Then handle remote sources — repo check must come before URL check so that
+  // https://github.com/... is treated as a repo, not fetched as a web page.
   for (const src of sources) {
-    if (isUrlGlob(src)) {
-      const pages = await fetchUrlGlob(src, { maxPages: opts.maxPages, noCache: opts.noCache });
-      for (const page of pages) {
-        results.push({
-          path: page.url,
-          relPath: page.url,
-          content: page.content,
-          lang: '',
-        });
-      }
-    } else if (isUrl(src)) {
-      try {
-        const page = await fetchUrl(src);
-        results.push({
-          path: page.url,
-          relPath: page.url,
-          content: page.content,
-          lang: '',
-        });
-      } catch (e) {
-        if (opts.strict) throw e;
-        process.stderr.write(`warn: failed to fetch ${src}: ${(e as Error).message}\n`);
-      }
-    } else if (isRepoUrl(src)) {
+    if (isRepoUrl(src)) {
       try {
         const entries = await fetchRepo(src, opts, opts.noCache);
         results.push(...entries);
       } catch (e) {
         if (opts.strict) throw e;
         process.stderr.write(`warn: failed to fetch repo ${src}: ${(e as Error).message}\n`);
+      }
+    } else if (isUrlGlob(src)) {
+      const pages = await fetchUrlGlob(src, { maxPages: opts.maxPages, noCache: opts.noCache });
+      for (const page of pages) {
+        results.push({ path: page.url, relPath: page.url, content: page.content, lang: '' });
+      }
+    } else if (isUrl(src)) {
+      try {
+        const page = await fetchUrl(src);
+        results.push({ path: page.url, relPath: page.url, content: page.content, lang: '' });
+      } catch (e) {
+        if (opts.strict) throw e;
+        process.stderr.write(`warn: failed to fetch ${src}: ${(e as Error).message}\n`);
       }
     }
   }
