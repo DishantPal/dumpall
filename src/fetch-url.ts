@@ -55,32 +55,71 @@ export async function fetchUrl(url: string, quiet = false): Promise<FetchedPage>
 
 // ---- Sitemap-based URL glob expansion ----
 
-async function fetchSitemap(domain: string): Promise<string[] | null> {
+function extractLocs(xml: string): string[] {
+  const locs: string[] = [];
+  const locRegex = /<loc>([\s\S]*?)<\/loc>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = locRegex.exec(xml)) !== null) locs.push(m[1].trim());
+  return locs;
+}
+
+function isSitemapIndex(xml: string): boolean {
+  return /<sitemapindex/i.test(xml);
+}
+
+async function fetchXml(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT }, redirect: 'follow' });
+    if (!res.ok) return null;
+    const ct = res.headers.get('content-type') ?? '';
+    // Accept xml or plain text (some servers serve sitemap as text/plain)
+    if (!ct.includes('xml') && !ct.includes('text')) return null;
+    return await res.text();
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSitemapUrls(sitemapUrl: string, depth = 0): Promise<string[]> {
+  if (depth > 3) return [];
+  const xml = await fetchXml(sitemapUrl);
+  if (!xml) return [];
+  const locs = extractLocs(xml);
+  if (isSitemapIndex(xml)) {
+    // Recursively fetch each child sitemap
+    const childResults = await Promise.all(locs.map(loc => fetchSitemapUrls(loc, depth + 1)));
+    return childResults.flat();
+  }
+  return locs;
+}
+
+async function findSitemapUrls(domain: string): Promise<string[] | null> {
+  // 1. Check robots.txt for Sitemap: directives (most reliable)
+  const robotsUrls: string[] = [];
+  try {
+    const res = await fetch(`${domain}/robots.txt`, { headers: { 'User-Agent': USER_AGENT } });
+    if (res.ok) {
+      const text = await res.text();
+      for (const line of text.split('\n')) {
+        const m = line.match(/^Sitemap:\s*(.+)/i);
+        if (m) robotsUrls.push(m[1].trim());
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2. Fall back to well-known paths
   const candidates = [
+    ...robotsUrls,
     `${domain}/sitemap.xml`,
     `${domain}/sitemap_index.xml`,
+    `${domain}/sitemap/sitemap.xml`,
   ];
 
-  for (const sitemapUrl of candidates) {
-    try {
-      const res = await fetch(sitemapUrl, {
-        headers: { 'User-Agent': USER_AGENT },
-        redirect: 'follow',
-      });
-      if (!res.ok) continue;
-      const xml = await res.text();
-      // Extract all <loc>...</loc> entries
-      const locs: string[] = [];
-      const locRegex = /<loc>([\s\S]*?)<\/loc>/gi;
-      let m: RegExpExecArray | null;
-      while ((m = locRegex.exec(xml)) !== null) {
-        locs.push(m[1].trim());
-      }
-      if (locs.length > 0) return locs;
-    } catch {
-      // try next candidate
-    }
+  for (const url of candidates) {
+    const locs = await fetchSitemapUrls(url);
+    if (locs.length > 0) return locs;
   }
+
   return null;
 }
 
@@ -98,10 +137,13 @@ export async function fetchUrlGlob(
   }
   const domain = urlMatch[1];
 
-  const locs = await fetchSitemap(domain);
+  const sitemapSp = spinner(`Looking for sitemap at ${domain}...`);
+  const locs = await findSitemapUrls(domain);
   if (!locs) {
-    throw new Error(`No sitemap found at ${domain}/sitemap.xml. Cannot expand URL glob.`);
+    sitemapSp.fail(`No sitemap found for ${domain}. Checked robots.txt and common paths.`);
+    throw new Error(`No sitemap found for ${domain}. Cannot expand URL glob without a sitemap.`);
   }
+  sitemapSp.done(`Found ${locs.length} URLs in sitemap`);
 
   // Filter locs using picomatch against the glob pattern
   const isMatch = picomatch(pattern, { dot: true });
