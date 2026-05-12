@@ -6,53 +6,48 @@ on:
       - master
     paths:
       - 'package.json'
-      - 'dumpall'
+      - 'src/**'
       - 'README.md'
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-          
-      - name: Make script executable
-        run: chmod +x dumpall
-        
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
       - name: Check if version changed
         id: version-check
         run: |
-          # Get current version from package.json
           CURRENT_VERSION=$(node -p "require('./package.json').version")
-          
-          # Try to get published version from npm
           PUBLISHED_VERSION=$(npm view dumpall version 2>/dev/null || echo "0.0.0")
-          
-          echo "Current version: $CURRENT_VERSION"
-          echo "Published version: $PUBLISHED_VERSION"
-          
+          echo "Current: $CURRENT_VERSION  Published: $PUBLISHED_VERSION"
           if [ "$CURRENT_VERSION" != "$PUBLISHED_VERSION" ]; then
             echo "version_changed=true" >> $GITHUB_OUTPUT
             echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           else
             echo "version_changed=false" >> $GITHUB_OUTPUT
           fi
-          
+
       - name: Publish to npm
         if: steps.version-check.outputs.version_changed == 'true'
-        run: |
-          echo "Publishing version ${{ steps.version-check.outputs.new_version }} to npm..."
-          npm publish
+        run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          
+
       - name: Create Git tag
         if: steps.version-check.outputs.version_changed == 'true'
         run: |
@@ -62,7 +57,7 @@ jobs:
           git push origin "v${{ steps.version-check.outputs.new_version }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
+
       - name: Create GitHub Release
         if: steps.version-check.outputs.version_changed == 'true'
         uses: actions/create-release@v1
@@ -72,8 +67,6 @@ jobs:
           tag_name: "v${{ steps.version-check.outputs.new_version }}"
           release_name: "dumpall v${{ steps.version-check.outputs.new_version }}"
           body: |
-            Automated release for dumpall v${{ steps.version-check.outputs.new_version }}
-            
-            Install with: `npx dumpall@${{ steps.version-check.outputs.new_version }}`
+            Install: `npm install -g dumpall` or `npx dumpall`
           draft: false
           prerelease: false
