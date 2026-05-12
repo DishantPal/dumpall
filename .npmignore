@@ -1,4 +1,8 @@
 # Website assets (not needed in npm package)
+web/
+docs/
+ref/
+test/
 *.html
 *.gif
 *.png
