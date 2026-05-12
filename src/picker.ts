@@ -39,21 +39,37 @@ function fuzzyScore(query: string, str: string): number {
 }
 
 // ── Core fuzzy picker (raw TTY) ───────────────────────────────────────────────
-async function fuzzyPick(files: string[]): Promise<string[]> {
+interface PickItem { label: string; value: string; }
+
+// Strip ANSI codes to measure real display width
+function visibleLen(s: string): number {
+  return s.replace(/\x1b\[[0-9;]*m/g, '').length;
+}
+
+function truncate(s: string, maxLen: number): string {
+  if (s.length <= maxLen) return s;
+  return s.slice(0, maxLen - 1) + '…';
+}
+
+async function fuzzyPick(items: PickItem[]): Promise<string[]> {
   return new Promise((resolve) => {
     const out = process.stdout;
     const inp = process.stdin;
 
     if (!inp.isTTY || !out.isTTY) {
-      resolve(files);
+      resolve(items.map(i => i.value));
       return;
     }
+
+    const cols = out.columns ?? 80;
+    // Max usable label width: cols minus prefix "  ❯ ◆ " (6 chars)
+    const labelWidth = Math.max(20, cols - 8);
 
     let query = '';
     let cursorIdx = 0;
     let scrollOffset = 0;
-    const selected = new Set<string>();
-    let filtered: string[] = files.slice();
+    const selected = new Set<string>(); // stores values
+    let filtered: PickItem[] = items.slice();
     const maxVisible = Math.max(5, (out.rows ?? 24) - 6);
     let linesDrawn = 0;
     let initialized = false;
@@ -65,13 +81,13 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
 
     function applyFilter() {
       if (!query) {
-        filtered = files.slice();
+        filtered = items.slice();
       } else {
-        filtered = files
-          .map(f => ({ f, score: fuzzyScore(query, f) }))
+        filtered = items
+          .map(item => ({ item, score: fuzzyScore(query, item.label) }))
           .filter(x => x.score >= 0)
           .sort((a, b) => b.score - a.score)
-          .map(x => x.f);
+          .map(x => x.item);
       }
       cursorIdx = 0;
       scrollOffset = 0;
@@ -84,25 +100,26 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
       lines.push(`\r${ESC}[K${BOLD}  > ${RESET}${query}`);
 
       // Separator
-      lines.push(`\r${ESC}[K${DIM}  ${'─'.repeat(Math.max(20, (out.columns ?? 60) - 4))}${RESET}`);
+      lines.push(`\r${ESC}[K${DIM}  ${'─'.repeat(Math.max(20, cols - 4))}${RESET}`);
 
-      // File list
+      // Item list — truncate label to prevent terminal wrapping
       for (let i = 0; i < maxVisible; i++) {
         const fileIdx = i + scrollOffset;
-        const file = filtered[fileIdx];
-        if (!file) { lines.push(`\r${ESC}[K`); continue; }
+        const item = filtered[fileIdx];
+        if (!item) { lines.push(`\r${ESC}[K`); continue; }
         const isCursor = fileIdx === cursorIdx;
-        const isSel = selected.has(file);
+        const isSel = selected.has(item.value);
         const box = isSel ? `${GREEN}◆${RESET}` : `${DIM}◇${RESET}`;
         const arrow = isCursor ? `${CYAN}❯${RESET}` : ' ';
-        const label = isCursor ? `${CYAN}${BOLD}${file}${RESET}` : file;
+        const raw = truncate(item.label, labelWidth);
+        const label = isCursor ? `${CYAN}${BOLD}${raw}${RESET}` : raw;
         lines.push(`\r${ESC}[K  ${arrow} ${box} ${label}`);
       }
 
       // Status bar
       const scrollInfo = filtered.length > maxVisible
         ? ` ${DIM}(${scrollOffset + 1}-${Math.min(scrollOffset + maxVisible, filtered.length)}/${filtered.length})${RESET}`
-        : `${DIM} ${filtered.length}/${files.length}${RESET}`;
+        : `${DIM} ${filtered.length}/${items.length}${RESET}`;
       const selCount = selected.size > 0 ? `  ${YELLOW}${BOLD}${selected.size} selected${RESET}` : '';
       lines.push(`\r${ESC}[K${DIM}  ↑↓ nav  space select  enter confirm  esc cancel${RESET}${scrollInfo}${selCount}`);
 
@@ -142,9 +159,8 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
       if (key === '\x1b') { cleanup(); resolve([]); return; }
 
       if (key === '\r' || key === '\n') {
-        // fzf behavior: Enter with no selections confirms the highlighted item
         if (selected.size === 0 && filtered[cursorIdx]) {
-          selected.add(filtered[cursorIdx]);
+          selected.add(filtered[cursorIdx].value);
         }
         cleanup();
         resolve([...selected]);
@@ -152,8 +168,8 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
       }
 
       if (key === ' ') {
-        const file = filtered[cursorIdx];
-        if (file) selected.has(file) ? selected.delete(file) : selected.add(file);
+        const item = filtered[cursorIdx];
+        if (item) selected.has(item.value) ? selected.delete(item.value) : selected.add(item.value);
       } else if (key === '\x1b[A') {
         cursorIdx = Math.max(0, cursorIdx - 1);
         if (cursorIdx < scrollOffset) scrollOffset = cursorIdx;
@@ -195,13 +211,16 @@ export async function runPicker(
   source: string,
   collectOpts: CollectOptions & { maxPages?: number; noCache?: boolean },
 ): Promise<FileEntry[]> {
-  // ── URL glob: fetch sitemap URLs, pick from list, fetch selected ──
+  // ── URL glob: fetch pages, show path slugs in picker, return selected ──
   if (isUrlGlob(source)) {
     const pages = await fetchUrlGlob(source, { maxPages: collectOpts.maxPages, noCache: collectOpts.noCache });
     if (pages.length === 0) { process.stderr.write('No pages found matching glob.\n'); return []; }
-    const urls = pages.map(p => p.url);
-    if (urls.length > 500) process.stderr.write(`  ${urls.length} pages — type to filter\n`);
-    const chosen = await fuzzyPick(urls);
+    // Show just the path slug as label — shorter, easier to fuzzy search
+    const items: PickItem[] = pages.map(p => ({
+      label: new URL(p.url).pathname,
+      value: p.url,
+    }));
+    const chosen = await fuzzyPick(items);
     if (chosen.length === 0) return [];
     const chosenSet = new Set(chosen);
     return pages
@@ -209,9 +228,9 @@ export async function runPicker(
       .map(p => ({ path: p.url, relPath: p.url, content: p.content, lang: '' }));
   }
 
-  // ── Plain URL: fetch the single page, no picker needed ──
+  // ── Plain URL: fetch and return directly ──
   if (isUrl(source)) {
-    process.stderr.write(`Note: @ with a single URL just fetches it — use a glob like ${source}/* to pick from multiple pages.\n`);
+    process.stderr.write(`Note: @ with a single URL fetches it directly — use ${source}/* to pick from multiple pages.\n`);
     const page = await fetchUrl(source);
     return [{ path: page.url, relPath: page.url, content: page.content, lang: '' }];
   }
@@ -219,10 +238,9 @@ export async function runPicker(
   // ── Repo URL ──
   if (isRepoUrl(source)) {
     const repoEntries = await fetchRepo(source, collectOpts);
-    const allFiles = repoEntries.map(e => e.relPath);
-    if (allFiles.length === 0) { process.stderr.write('No files found in repo.\n'); return []; }
-    if (allFiles.length > 500) process.stderr.write(`  ${allFiles.length} files — type to filter\n`);
-    const chosen = await fuzzyPick(allFiles);
+    if (repoEntries.length === 0) { process.stderr.write('No files found in repo.\n'); return []; }
+    const items: PickItem[] = repoEntries.map(e => ({ label: e.relPath, value: e.relPath }));
+    const chosen = await fuzzyPick(items);
     if (chosen.length === 0) return [];
     const chosenSet = new Set(chosen);
     return repoEntries.filter(e => chosenSet.has(e.relPath));
@@ -237,9 +255,9 @@ export async function runPicker(
     : [path.basename(resolved)];
 
   if (allFiles.length === 0) { process.stderr.write('No files found in source.\n'); return []; }
-  if (allFiles.length > 500) process.stderr.write(`  ${allFiles.length} files — type to filter\n`);
 
-  const chosen = await fuzzyPick(allFiles);
+  const items: PickItem[] = allFiles.map(f => ({ label: f, value: f }));
+  const chosen = await fuzzyPick(items);
   if (chosen.length === 0) return [];
 
   const base = stat.isDirectory() ? resolved : path.dirname(resolved);
