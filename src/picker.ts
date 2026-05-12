@@ -44,7 +44,6 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
     const inp = process.stdin;
 
     if (!inp.isTTY || !out.isTTY) {
-      // Non-interactive fallback: return all files
       resolve(files);
       return;
     }
@@ -56,6 +55,7 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
     let filtered: string[] = files.slice();
     const maxVisible = Math.max(5, (out.rows ?? 24) - 6);
     let linesDrawn = 0;
+    let initialized = false;
 
     inp.setRawMode(true);
     inp.resume();
@@ -77,47 +77,49 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
     }
 
     function render() {
-      if (linesDrawn > 0) out.write(UP(linesDrawn));
-
       const lines: string[] = [];
 
       // Input line
-      lines.push(`${CLEAR_LINE}${BOLD}  > ${RESET}${query}${ESC}[K`);
+      lines.push(`\r${ESC}[K${BOLD}  > ${RESET}${query}`);
 
       // Separator
-      lines.push(`${CLEAR_LINE}${DIM}  ${'─'.repeat(Math.max(20, (out.columns ?? 60) - 4))}${RESET}`);
+      lines.push(`\r${ESC}[K${DIM}  ${'─'.repeat(Math.max(20, (out.columns ?? 60) - 4))}${RESET}`);
 
       // File list
-      const slice = filtered.slice(scrollOffset, scrollOffset + maxVisible);
       for (let i = 0; i < maxVisible; i++) {
         const fileIdx = i + scrollOffset;
         const file = filtered[fileIdx];
-        if (!file) {
-          lines.push(CLEAR_LINE);
-          continue;
-        }
+        if (!file) { lines.push(`\r${ESC}[K`); continue; }
         const isCursor = fileIdx === cursorIdx;
         const isSel = selected.has(file);
         const box = isSel ? `${GREEN}◆${RESET}` : `${DIM}◇${RESET}`;
         const arrow = isCursor ? `${CYAN}❯${RESET}` : ' ';
         const label = isCursor ? `${CYAN}${BOLD}${file}${RESET}` : file;
-        lines.push(`${CLEAR_LINE}  ${arrow} ${box} ${label}`);
+        lines.push(`\r${ESC}[K  ${arrow} ${box} ${label}`);
       }
 
-      // Scroll indicator
-      const hasMore = filtered.length > maxVisible;
-      const scrollInfo = hasMore
-        ? ` ${DIM}(${scrollOffset + 1}-${Math.min(scrollOffset + maxVisible, filtered.length)} of ${filtered.length})${RESET}`
-        : '';
-
       // Status bar
-      const selCount = selected.size > 0 ? `${YELLOW}${BOLD}${selected.size} selected${RESET}  ` : '';
-      lines.push(
-        `${CLEAR_LINE}${DIM}  ↑↓ navigate  space select  enter confirm  esc cancel${RESET}  ${selCount}${DIM}${filtered.length}/${files.length}${scrollInfo}${RESET}`
-      );
+      const scrollInfo = filtered.length > maxVisible
+        ? ` ${DIM}(${scrollOffset + 1}-${Math.min(scrollOffset + maxVisible, filtered.length)}/${filtered.length})${RESET}`
+        : `${DIM} ${filtered.length}/${files.length}${RESET}`;
+      const selCount = selected.size > 0 ? `  ${YELLOW}${BOLD}${selected.size} selected${RESET}` : '';
+      lines.push(`\r${ESC}[K${DIM}  ↑↓ nav  space select  enter confirm  esc cancel${RESET}${scrollInfo}${selCount}`);
 
-      out.write(lines.join('\n'));
-      linesDrawn = lines.length;
+      const totalLines = lines.length; // e.g. 20
+
+      if (!initialized) {
+        // Reserve space: scroll terminal down enough lines so picker fits
+        out.write('\r\n'.repeat(totalLines));
+        out.write(UP(totalLines));
+        initialized = true;
+      } else {
+        out.write(UP(linesDrawn));
+      }
+
+      // Write all lines separated by \r\n, plus trailing \r\n so cursor lands
+      // one line BELOW the picker — makes UP(totalLines) exact on next render.
+      out.write(lines.join('\r\n') + '\r\n');
+      linesDrawn = totalLines;
     }
 
     function cleanup() {
@@ -125,45 +127,42 @@ async function fuzzyPick(files: string[]): Promise<string[]> {
       inp.pause();
       inp.removeAllListeners('data');
       out.write(SHOW_CURSOR);
-      if (linesDrawn > 0) {
-        out.write(UP(linesDrawn));
-        for (let i = 0; i < linesDrawn; i++) out.write(`${CLEAR_LINE}\n`);
-        out.write(UP(linesDrawn));
-      }
+      // Move to start of picker area and wipe all lines
+      out.write(UP(linesDrawn));
+      for (let i = 0; i < linesDrawn; i++) out.write(`\r${ESC}[K\r\n`);
+      out.write(UP(linesDrawn));
     }
 
     applyFilter();
     render();
 
     inp.on('data', (key: string) => {
-      // Ctrl+C
       if (key === '\x03') { cleanup(); process.exit(0); }
-      // Escape
       if (key === '\x1b') { cleanup(); resolve([]); return; }
-      // Enter
-      if (key === '\r' || key === '\n') { cleanup(); resolve([...selected]); return; }
-      // Space — toggle selection
+
+      if (key === '\r' || key === '\n') {
+        // fzf behavior: Enter with no selections confirms the highlighted item
+        if (selected.size === 0 && filtered[cursorIdx]) {
+          selected.add(filtered[cursorIdx]);
+        }
+        cleanup();
+        resolve([...selected]);
+        return;
+      }
+
       if (key === ' ') {
         const file = filtered[cursorIdx];
         if (file) selected.has(file) ? selected.delete(file) : selected.add(file);
-      }
-      // Up arrow
-      else if (key === '\x1b[A') {
+      } else if (key === '\x1b[A') {
         cursorIdx = Math.max(0, cursorIdx - 1);
         if (cursorIdx < scrollOffset) scrollOffset = cursorIdx;
-      }
-      // Down arrow
-      else if (key === '\x1b[B') {
+      } else if (key === '\x1b[B') {
         cursorIdx = Math.min(filtered.length - 1, cursorIdx + 1);
         if (cursorIdx >= scrollOffset + maxVisible) scrollOffset = cursorIdx - maxVisible + 1;
-      }
-      // Backspace
-      else if (key === '\x7f' || key === '\b') {
+      } else if (key === '\x7f' || key === '\b') {
         query = query.slice(0, -1);
         applyFilter();
-      }
-      // Printable character
-      else if (key.length === 1 && key >= ' ') {
+      } else if (key.length === 1 && key >= ' ') {
         query += key;
         applyFilter();
       }
