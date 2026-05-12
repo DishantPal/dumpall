@@ -257,6 +257,6 @@ export async function runPicker(
   const base = stat.isDirectory() ? resolved : path.dirname(resolved);
   const absPaths = chosen.map(p => path.join(base, p));
   const entries = collect(absPaths, collectOpts);
-  for (const e of entries) e.relPath = path.relative(base, e.path);
+  // relPath already set CWD-relative by collect(); no override needed
   return entries;
 }

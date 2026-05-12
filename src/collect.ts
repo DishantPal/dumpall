@@ -198,10 +198,11 @@ export function collect(sources: string[], opts: CollectOptions): FileEntry[] {
     );
     const ignoreMatcher = makeIgnoreMatcher(ignorePatterns);
 
+    const cwd = process.cwd();
     if (stat.isDirectory()) {
-      walkDir(resolved, resolved, opts, excludeMatcher, ignoreMatcher, results);
+      walkDir(resolved, cwd, opts, excludeMatcher, ignoreMatcher, results);
     } else {
-      const relPath = path.basename(resolved);
+      const relPath = path.relative(cwd, resolved);
       collectFile(resolved, relPath, opts, excludeMatcher, ignoreMatcher, results);
     }
   }
