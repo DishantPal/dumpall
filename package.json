@@ -3,19 +3,34 @@
   "version": "2.0.0",
   "description": "The universal context compiler. Everything into one document. Instantly.",
   "type": "module",
-  "bin": { "dumpall": "dist/cli.js" },
-  "files": ["dist"],
+  "bin": {
+    "dumpall": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/cli.ts",
     "prepublishOnly": "npm run build"
   },
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "license": "MIT",
   "dependencies": {
+    "@clack/prompts": "^1.4.0",
+    "@exodus/bytes": "^1.15.0",
+    "@mozilla/readability": "^0.6.0",
+    "@types/jsdom": "^28.0.3",
+    "@types/turndown": "^5.0.6",
+    "@types/unzipper": "^0.10.11",
     "citty": "^0.1.6",
     "clipboardy": "^4.0.0",
-    "picomatch": "^4.0.2"
+    "jsdom": "^29.1.1",
+    "picomatch": "^4.0.2",
+    "turndown": "^7.2.4",
+    "unzipper": "^0.12.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

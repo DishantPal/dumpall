@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import picomatch from 'picomatch';
 import { getLang } from './lang.js';
+import { isUrl, isUrlGlob, fetchUrl, fetchUrlGlob } from './fetch-url.js';
+import { isRepoUrl, fetchRepo } from './fetch-repo.js';
 
 export interface FileEntry {
   path: string;
@@ -171,6 +173,9 @@ export function collect(sources: string[], opts: CollectOptions): FileEntry[] {
   const excludeMatcher = makeExcludeMatcher(opts.exclude ?? []);
 
   for (const src of sources) {
+    // URL and repo sources are handled asynchronously via collectAsync
+    if (isUrl(src) || isRepoUrl(src)) continue;
+
     let resolved: string;
     try {
       resolved = fs.realpathSync(path.resolve(src));
@@ -197,6 +202,55 @@ export function collect(sources: string[], opts: CollectOptions): FileEntry[] {
     } else {
       const relPath = path.basename(resolved);
       collectFile(resolved, relPath, opts, excludeMatcher, ignoreMatcher, results);
+    }
+  }
+
+  return results;
+}
+
+export async function collectAsync(
+  sources: string[],
+  opts: CollectOptions & { maxPages?: number; noCache?: boolean },
+): Promise<FileEntry[]> {
+  const results: FileEntry[] = [];
+
+  // First collect local files synchronously
+  const localSources = sources.filter(s => !isUrl(s) && !isRepoUrl(s));
+  results.push(...collect(localSources, opts));
+
+  // Then handle remote sources
+  for (const src of sources) {
+    if (isUrlGlob(src)) {
+      const pages = await fetchUrlGlob(src, { maxPages: opts.maxPages, noCache: opts.noCache });
+      for (const page of pages) {
+        results.push({
+          path: page.url,
+          relPath: page.url,
+          content: page.content,
+          lang: '',
+        });
+      }
+    } else if (isUrl(src)) {
+      try {
+        const page = await fetchUrl(src);
+        results.push({
+          path: page.url,
+          relPath: page.url,
+          content: page.content,
+          lang: '',
+        });
+      } catch (e) {
+        if (opts.strict) throw e;
+        process.stderr.write(`warn: failed to fetch ${src}: ${(e as Error).message}\n`);
+      }
+    } else if (isRepoUrl(src)) {
+      try {
+        const entries = await fetchRepo(src, opts, opts.noCache);
+        results.push(...entries);
+      } catch (e) {
+        if (opts.strict) throw e;
+        process.stderr.write(`warn: failed to fetch repo ${src}: ${(e as Error).message}\n`);
+      }
     }
   }
 

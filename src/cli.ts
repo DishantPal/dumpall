@@ -1,12 +1,40 @@
 import { defineCommand, runMain } from 'citty';
-import { collect, collectFromStdin, parseSizeArg } from './collect.js';
+import { collect, collectAsync, collectFromStdin, parseSizeArg } from './collect.js';
 import type { CollectOptions, FileEntry } from './collect.js';
 import { format, generateTree } from './format.js';
 import type { OutputFormat } from './format.js';
 import { writeOutput } from './output.js';
 import { estimateTokens } from './tokens.js';
+import { runPicker } from './picker.js';
 
 const VERSION = '2.0.0';
+
+// ---- @ operator: detect before citty parses args ----
+// Returns { pickerSource, cleanedArgv } if @ is present, else { pickerSource: null, cleanedArgv }
+function extractAtOperator(argv: string[]): { pickerSource: string | null; cleanedArgv: string[] } {
+  const atIdx = argv.indexOf('@');
+  if (atIdx === -1) return { pickerSource: null, cleanedArgv: argv };
+
+  // The source is the arg immediately before @, if it exists and isn't a flag
+  const before = atIdx > 0 ? argv[atIdx - 1] : null;
+  const pickerSource = (before && !before.startsWith('-')) ? before : process.cwd();
+
+  // Check for arg after @ that is also a source (not a flag) — error case
+  const after = atIdx + 1 < argv.length ? argv[atIdx + 1] : null;
+  if (after && !after.startsWith('-') && after !== '@') {
+    process.stderr.write('Error: @ takes one source\n');
+    process.exit(1);
+  }
+
+  // Remove the @ from argv (and the source before it if it's not a flag)
+  const cleaned = argv.filter((a, i) => {
+    if (i === atIdx) return false; // remove @
+    if (before && !before.startsWith('-') && i === atIdx - 1) return false; // remove source
+    return true;
+  });
+
+  return { pickerSource, cleanedArgv: cleaned };
+}
 
 const main = defineCommand({
   meta: {
@@ -59,6 +87,10 @@ const main = defineCommand({
       type: 'string',
       description: 'Skip files larger than size (default: 1MB)',
     },
+    'max-pages': {
+      type: 'string',
+      description: 'Max pages to fetch when using URL globs (default: 50)',
+    },
     format: {
       type: 'string',
       description: 'Output format: md (default), xml, json',
@@ -77,7 +109,7 @@ const main = defineCommand({
     },
     'no-cache': {
       type: 'boolean',
-      description: '(no-op, reserved for future use)',
+      description: 'Bypass cache for repo and URL fetching',
     },
   },
   run({ args }) {
@@ -85,27 +117,40 @@ const main = defineCommand({
   },
 });
 
+// Intercept @ before citty runs
+const rawArgv = process.argv.slice(2);
+const { pickerSource, cleanedArgv } = extractAtOperator(rawArgv);
+if (pickerSource !== null) {
+  // Re-inject the cleaned argv so citty sees them
+  process.argv.splice(2, rawArgv.length, ...cleanedArgv);
+}
+
 async function run(args: Record<string, unknown>) {
   // Collect positional args
   const positionals = ((args._ ?? []) as string[]).filter(Boolean);
 
   // Handle repeatable flags (citty passes last value; we need all values)
   // citty doesn't natively support repeatable string flags, so we parse process.argv manually
-  const rawArgv = process.argv.slice(2);
   const excludePatterns = collectRepeatable(rawArgv, ['-e', '--exclude']);
   const grepPatterns = collectRepeatable(rawArgv, ['--grep']);
 
   const maxFileSizeStr = args['max-file-size'] as string | undefined;
   const maxFileSize = maxFileSizeStr ? parseSizeArg(maxFileSizeStr) : 1024 * 1024;
 
-  const outputFormat = ((args.format as string | undefined) ?? 'md') as OutputFormat;
+  const maxPagesStr = args['max-pages'] as string | undefined;
+  const maxPages = maxPagesStr ? parseInt(maxPagesStr, 10) : 50;
 
-  const collectOpts: CollectOptions = {
+  const outputFormat = ((args.format as string | undefined) ?? 'md') as OutputFormat;
+  const noCache = args['no-cache'] as boolean | undefined;
+
+  const collectOpts: CollectOptions & { maxPages?: number; noCache?: boolean } = {
     exclude: excludePatterns,
     grep: grepPatterns,
     maxFileSize,
     followSymlinks: args['follow-symlinks'] as boolean | undefined,
     strict: args.strict as boolean | undefined,
+    maxPages,
+    noCache,
   };
 
   let sources = positionals;
@@ -115,13 +160,31 @@ async function run(args: Record<string, unknown>) {
     sources = [...sources, ...stdinSources];
   }
 
+  // Handle @ operator (interactive picker)
+  if (pickerSource !== null) {
+    const pickedEntries = await runPicker(pickerSource, collectOpts);
+    // Merge with any other positional sources
+    const otherEntries = sources.length > 0 ? await collectAsync(sources, collectOpts) : [];
+    const entries = [...pickedEntries, ...otherEntries];
+    await renderAndOutput(entries, args, outputFormat);
+    return;
+  }
+
   if (sources.length === 0 && !args.stdin) {
     process.stdout.write(getHelp());
     process.exit(0);
   }
 
-  const entries = sources.length > 0 ? collect(sources, collectOpts) : [];
+  const entries = sources.length > 0 ? await collectAsync(sources, collectOpts) : [];
 
+  await renderAndOutput(entries, args, outputFormat);
+}
+
+async function renderAndOutput(
+  entries: FileEntry[],
+  args: Record<string, unknown>,
+  outputFormat: OutputFormat,
+): Promise<void> {
   // max-tokens: drop largest files first
   const maxTokensStr = args['max-tokens'] as string | undefined;
   if (maxTokensStr) {
@@ -211,6 +274,9 @@ function getHelp(): string {
 USAGE
   dumpall [sources...] [flags]
 
+SOURCES
+  Local paths, URLs (http/https), repo slugs (github.com/owner/repo[@ref][/glob])
+
 FLAGS
   -c, --clip              Copy to clipboard
   -o, --out <file>        Write to file
@@ -222,10 +288,12 @@ FLAGS
   --tokens                Show token count estimate
   --max-tokens <n>        Truncate to fit token budget (drop largest files first)
   --max-file-size <s>     Skip files larger than size (default: 1MB)
+  --max-pages <n>         Max pages to fetch when using URL globs (default: 50)
   --format <fmt>          Output format: md (default), xml, json
   --stdin                 Read sources from stdin (one per line)
   --follow-symlinks       Follow symlinks during traversal
   --strict                Abort on any error instead of skipping
+  --no-cache              Bypass cache for remote fetching
   -v, --version           Show version
   -h, --help              Show help
 
@@ -235,6 +303,11 @@ EXAMPLES
   dumpall src/ -c --tokens
   dumpall . --exclude "*.test.ts" --grep "TODO"
   find . -name "*.ts" | dumpall --stdin
+  dumpall https://example.com
+  dumpall "https://docs.react.dev/**"
+  dumpall github.com/sindresorhus/is
+  dumpall github.com/owner/repo@main/src/**
+  dumpall src/ @
 `;
 }
 
