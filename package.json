@@ -19,12 +19,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@clack/prompts": "^1.4.0",
-    "@exodus/bytes": "^1.15.0",
     "@mozilla/readability": "^0.6.0",
-    "@types/jsdom": "^28.0.3",
-    "@types/turndown": "^5.0.6",
-    "@types/unzipper": "^0.10.11",
     "citty": "^0.1.6",
     "clipboardy": "^4.0.0",
     "jsdom": "^29.1.1",
@@ -34,15 +29,18 @@
     "unzipper": "^0.12.3"
   },
   "devDependencies": {
+    "@types/jsdom": "^28.0.3",
     "@types/node": "^20.0.0",
     "@types/picomatch": "^2.3.4",
+    "@types/turndown": "^5.0.6",
+    "@types/unzipper": "^0.10.11",
     "tsup": "^8.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ThisIsntMyId/dumpall.git"
+    "url": "git+https://github.com/DishantPal/dumpall.git"
   },
   "keywords": [
     "cli",
@@ -56,7 +54,7 @@
   ],
   "author": "Dishant Pal <dishantpal37@gmail.com>",
   "bugs": {
-    "url": "https://github.com/ThisIsntMyId/dumpall/issues"
+    "url": "https://github.com/DishantPal/dumpall/issues"
   },
   "homepage": "https://dumpall.pages.dev"
 }
