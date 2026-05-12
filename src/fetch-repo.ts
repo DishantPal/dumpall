@@ -5,6 +5,7 @@ import unzipper from 'unzipper';
 import picomatch from 'picomatch';
 import { collect } from './collect.js';
 import type { CollectOptions, FileEntry } from './collect.js';
+import { spinner } from './progress.js';
 
 const USER_AGENT = 'dumpall/2.0 (+https://dumpall.pages.dev)';
 
@@ -161,17 +162,21 @@ export async function fetchRepo(
 ): Promise<FileEntry[]> {
   const parsed = parseRepoUrl(arg);
 
-  process.stderr.write(`↓ Fetching ${parsed.owner}/${parsed.repo}...\n`);
+  const sp = spinner(`Fetching ${parsed.owner}/${parsed.repo}...`);
 
   const ref = parsed.ref ?? await resolveDefaultBranch(parsed);
   const zipUrl = getZipUrl(parsed, ref);
   const cachePath = getCachePath(parsed, ref);
   const immutable = isImmutableRef(ref);
 
-  let needDownload = noCache || !isCacheValid(cachePath, immutable);
+  const needDownload = noCache || !isCacheValid(cachePath, immutable);
 
   if (needDownload) {
+    sp.update(`Downloading ${parsed.owner}/${parsed.repo}@${ref}...`);
     await downloadZip(zipUrl, cachePath, parsed.host);
+    sp.update(`Extracting ${parsed.owner}/${parsed.repo}...`);
+  } else {
+    sp.update(`Extracting ${parsed.owner}/${parsed.repo} (cached)...`);
   }
 
   const tmpDir = makeTempDir();
@@ -179,29 +184,25 @@ export async function fetchRepo(
   try {
     await extractZip(cachePath, tmpDir);
 
-    // The zip typically extracts into a subdirectory like "repo-main/"
     const extracted = fs.readdirSync(tmpDir);
     const repoRoot = extracted.length === 1 && fs.statSync(path.join(tmpDir, extracted[0])).isDirectory()
       ? path.join(tmpDir, extracted[0])
       : tmpDir;
 
-    // Collect files
     const entries = collect([repoRoot], collectOpts);
 
-    // Re-map relPaths to be relative from repoRoot, then strip the leading tmpDir prefix
     for (const e of entries) {
       e.relPath = path.relative(repoRoot, e.path);
     }
 
-    // If a path/glob was specified, filter
     if (parsed.pathGlob) {
       const isMatch = picomatch(parsed.pathGlob, { dot: true });
       const filtered = entries.filter(e => isMatch(e.relPath) || e.relPath.startsWith(parsed.pathGlob!.replace(/\*/g, '')));
-      process.stderr.write(`✓ Unpacked ${entries.length} files, filtered to ${filtered.length}\n`);
+      sp.done(`${filtered.length} files from ${parsed.owner}/${parsed.repo}`);
       return filtered;
     }
 
-    process.stderr.write(`✓ Unpacked ${entries.length} files\n`);
+    sp.done(`${entries.length} files from ${parsed.owner}/${parsed.repo}`);
     return entries;
   } finally {
     // Clean up temp dir

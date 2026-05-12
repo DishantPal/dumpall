@@ -2,6 +2,7 @@ import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
 import TurndownService from 'turndown';
 import picomatch from 'picomatch';
+import { spinner } from './progress.js';
 
 const USER_AGENT =
   'Mozilla/5.0 (compatible; dumpall/2.0; +https://dumpall.pages.dev)';
@@ -12,13 +13,15 @@ export interface FetchedPage {
   url: string;
 }
 
-export async function fetchUrl(url: string): Promise<FetchedPage> {
+export async function fetchUrl(url: string, quiet = false): Promise<FetchedPage> {
+  const sp = quiet ? null : spinner(`Fetching ${url}`);
   const res = await fetch(url, {
     headers: { 'User-Agent': USER_AGENT },
     redirect: 'follow',
   });
 
   if (!res.ok) {
+    sp?.fail(`HTTP ${res.status} — ${url}`);
     throw new Error(`HTTP ${res.status} fetching ${url}`);
   }
 
@@ -46,6 +49,7 @@ export async function fetchUrl(url: string): Promise<FetchedPage> {
     content = body ? td.turndown(body.innerHTML) : html;
   }
 
+  sp?.done(`${title || url}`);
   return { content, title, url };
 }
 
@@ -106,22 +110,24 @@ export async function fetchUrlGlob(
   const toFetch = matched.slice(0, maxPages);
   const total = toFetch.length;
 
-  process.stderr.write(`↓ Fetching ${total} pages matching ${pattern}\n`);
-
+  const sp = spinner(`Fetching page 1/${total}...`);
   const results: FetchedPage[] = [];
   const BATCH_SIZE = 5;
   const DELAY_MS = 200;
+  let done = 0;
 
   for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
     const batch = toFetch.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
-      batch.map(async (url, idx) => {
-        const pageNum = i + idx + 1;
-        process.stderr.write(`↓ Fetching page ${pageNum}/${total}...\n`);
+      batch.map(async (url) => {
         try {
-          return await fetchUrl(url);
+          const page = await fetchUrl(url, true);
+          done++;
+          sp.update(`Fetching page ${done}/${total}...`);
+          return page;
         } catch (e) {
-          process.stderr.write(`warn: failed to fetch ${url}: ${(e as Error).message}\n`);
+          done++;
+          sp.update(`Fetching page ${done}/${total}... (warn: ${(e as Error).message})`);
           return null;
         }
       }),
@@ -134,6 +140,7 @@ export async function fetchUrlGlob(
     }
   }
 
+  sp.done(`Fetched ${results.length}/${total} pages`);
   return results;
 }
 
