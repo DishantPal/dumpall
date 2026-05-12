@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { isRepoUrl, fetchRepo } from './fetch-repo.js';
+import { isUrlGlob, isUrl, fetchUrl, fetchUrlGlob } from './fetch-url.js';
 import { collect } from './collect.js';
 import type { CollectOptions, FileEntry } from './collect.js';
 
@@ -190,49 +191,57 @@ function listFilesRecursive(dir: string, base: string, results: string[] = []): 
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
-export async function runPicker(source: string, collectOpts: CollectOptions): Promise<FileEntry[]> {
-  // Must check isRepoUrl first — https://github.com/... is a valid picker source
-  if (!isRepoUrl(source) && (source.startsWith('http://') || source.startsWith('https://'))) {
-    process.stderr.write(`Error: @ does not support plain URL sources. Use a local path or a repo URL (github.com/owner/repo @).\n`);
-    process.exit(1);
+export async function runPicker(
+  source: string,
+  collectOpts: CollectOptions & { maxPages?: number; noCache?: boolean },
+): Promise<FileEntry[]> {
+  // ── URL glob: fetch sitemap URLs, pick from list, fetch selected ──
+  if (isUrlGlob(source)) {
+    const pages = await fetchUrlGlob(source, { maxPages: collectOpts.maxPages, noCache: collectOpts.noCache });
+    if (pages.length === 0) { process.stderr.write('No pages found matching glob.\n'); return []; }
+    const urls = pages.map(p => p.url);
+    if (urls.length > 500) process.stderr.write(`  ${urls.length} pages — type to filter\n`);
+    const chosen = await fuzzyPick(urls);
+    if (chosen.length === 0) return [];
+    const chosenSet = new Set(chosen);
+    return pages
+      .filter(p => chosenSet.has(p.url))
+      .map(p => ({ path: p.url, relPath: p.url, content: p.content, lang: '' }));
   }
 
-  let allFiles: string[] = [];
-  let isRepo = false;
-  let repoEntries: FileEntry[] = [];
+  // ── Plain URL: fetch the single page, no picker needed ──
+  if (isUrl(source)) {
+    process.stderr.write(`Note: @ with a single URL just fetches it — use a glob like ${source}/* to pick from multiple pages.\n`);
+    const page = await fetchUrl(source);
+    return [{ path: page.url, relPath: page.url, content: page.content, lang: '' }];
+  }
 
+  // ── Repo URL ──
   if (isRepoUrl(source)) {
-    isRepo = true;
-    process.stderr.write(`↓ Downloading repo for picker...\n`);
-    repoEntries = await fetchRepo(source, collectOpts);
-    allFiles = repoEntries.map(e => e.relPath);
-  } else {
-    const resolved = path.resolve(source);
-    if (!fs.existsSync(resolved)) throw new Error(`Source not found: ${source}`);
-    const stat = fs.statSync(resolved);
-    allFiles = stat.isDirectory()
-      ? listFilesRecursive(resolved, resolved)
-      : [path.basename(resolved)];
+    const repoEntries = await fetchRepo(source, collectOpts);
+    const allFiles = repoEntries.map(e => e.relPath);
+    if (allFiles.length === 0) { process.stderr.write('No files found in repo.\n'); return []; }
+    if (allFiles.length > 500) process.stderr.write(`  ${allFiles.length} files — type to filter\n`);
+    const chosen = await fuzzyPick(allFiles);
+    if (chosen.length === 0) return [];
+    const chosenSet = new Set(chosen);
+    return repoEntries.filter(e => chosenSet.has(e.relPath));
   }
 
-  if (allFiles.length === 0) {
-    process.stderr.write('No files found in source.\n');
-    return [];
-  }
+  // ── Local path ──
+  const resolved = path.resolve(source);
+  if (!fs.existsSync(resolved)) throw new Error(`Source not found: ${source}`);
+  const stat = fs.statSync(resolved);
+  const allFiles = stat.isDirectory()
+    ? listFilesRecursive(resolved, resolved)
+    : [path.basename(resolved)];
 
-  if (allFiles.length > 500) {
-    process.stderr.write(`  ${allFiles.length} files — type to filter\n`);
-  }
+  if (allFiles.length === 0) { process.stderr.write('No files found in source.\n'); return []; }
+  if (allFiles.length > 500) process.stderr.write(`  ${allFiles.length} files — type to filter\n`);
 
   const chosen = await fuzzyPick(allFiles);
   if (chosen.length === 0) return [];
 
-  const chosenSet = new Set(chosen);
-
-  if (isRepo) return repoEntries.filter(e => chosenSet.has(e.relPath));
-
-  const resolved = path.resolve(source);
-  const stat = fs.statSync(resolved);
   const base = stat.isDirectory() ? resolved : path.dirname(resolved);
   const absPaths = chosen.map(p => path.join(base, p));
   const entries = collect(absPaths, collectOpts);
