@@ -1,7 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs';
 import { isRepoUrl, fetchRepo } from './fetch-repo.js';
-import { isUrlGlob, isUrl, fetchUrl, fetchUrlGlob } from './fetch-url.js';
+import { isUrlGlob, isUrl, fetchUrl, matchSitemapUrls, fetchPages } from './fetch-url.js';
 import { collect } from './collect.js';
 import type { CollectOptions, FileEntry } from './collect.js';
 
@@ -211,21 +211,15 @@ export async function runPicker(
   source: string,
   collectOpts: CollectOptions & { maxPages?: number; noCache?: boolean },
 ): Promise<FileEntry[]> {
-  // ── URL glob: fetch pages, show path slugs in picker, return selected ──
+  // ── URL glob: show ALL matching sitemap URLs in picker first, fetch only selected ──
   if (isUrlGlob(source)) {
-    const pages = await fetchUrlGlob(source, { maxPages: collectOpts.maxPages, noCache: collectOpts.noCache });
-    if (pages.length === 0) { process.stderr.write('No pages found matching glob.\n'); return []; }
-    // Show just the path slug as label — shorter, easier to fuzzy search
-    const items: PickItem[] = pages.map(p => ({
-      label: new URL(p.url).pathname,
-      value: p.url,
-    }));
+    const allUrls = await matchSitemapUrls(source);
+    if (allUrls.length === 0) { process.stderr.write('No pages found matching glob.\n'); return []; }
+    const items: PickItem[] = allUrls.map(u => ({ label: new URL(u).pathname, value: u }));
     const chosen = await fuzzyPick(items);
     if (chosen.length === 0) return [];
-    const chosenSet = new Set(chosen);
-    return pages
-      .filter(p => chosenSet.has(p.url))
-      .map(p => ({ path: p.url, relPath: p.url, content: p.content, lang: '' }));
+    const pages = await fetchPages(chosen);
+    return pages.map(p => ({ path: p.url, relPath: p.url, content: p.content, lang: '' }));
   }
 
   // ── Plain URL: fetch and return directly ──

@@ -123,18 +123,11 @@ async function findSitemapUrls(domain: string): Promise<string[] | null> {
   return null;
 }
 
-export async function fetchUrlGlob(
-  pattern: string,
-  opts: { maxPages?: number; noCache?: boolean } = {},
-): Promise<FetchedPage[]> {
-  const maxPages = opts.maxPages ?? 50;
-
-  // Extract base domain from pattern
-  // pattern might be like https://docs.react.dev/learn/**
+// Returns matching URLs from sitemap WITHOUT fetching content.
+// Used by the @ picker so users can select before any content is fetched.
+export async function matchSitemapUrls(pattern: string): Promise<string[]> {
   const urlMatch = pattern.match(/^(https?:\/\/[^/]+)/);
-  if (!urlMatch) {
-    throw new Error(`Cannot determine domain from URL pattern: ${pattern}`);
-  }
+  if (!urlMatch) throw new Error(`Cannot determine domain from URL pattern: ${pattern}`);
   const domain = urlMatch[1];
 
   const sitemapSp = spinner(`Looking for sitemap at ${domain}...`);
@@ -145,34 +138,31 @@ export async function fetchUrlGlob(
   }
   sitemapSp.done(`Found ${locs.length} URLs in sitemap`);
 
-  // Match by path only — picomatch chokes on :// in full URLs.
-  // Also normalize www vs non-www so patterns without www match sitemap URLs with www and vice versa.
-  const patternPath = pattern.replace(/^https?:\/\/[^/]+/, ''); // e.g. /resources/*
-  const patternHost = domain.replace(/^https?:\/\/(www\.)?/, ''); // e.g. parkingmd.com
+  const patternPath = pattern.replace(/^https?:\/\/[^/]+/, '');
+  const patternHost = domain.replace(/^https?:\/\/(www\.)?/, '');
   const pathMatcher = picomatch(patternPath || '/**', { dot: true });
 
-  const matched = locs.filter(loc => {
+  return locs.filter(loc => {
     try {
       const u = new URL(loc);
       const locHost = u.hostname.replace(/^www\./, '');
       if (locHost !== patternHost) return false;
       return pathMatcher(u.pathname);
-    } catch {
-      return false;
-    }
+    } catch { return false; }
   });
+}
 
-  const toFetch = matched.slice(0, maxPages);
-  const total = toFetch.length;
-
+// Fetches content for a specific list of URLs (used after picker selection).
+export async function fetchPages(urls: string[]): Promise<FetchedPage[]> {
+  const total = urls.length;
   const sp = spinner(`Fetching page 1/${total}...`);
   const results: FetchedPage[] = [];
   const BATCH_SIZE = 5;
   const DELAY_MS = 200;
   let done = 0;
 
-  for (let i = 0; i < toFetch.length; i += BATCH_SIZE) {
-    const batch = toFetch.slice(i, i + BATCH_SIZE);
+  for (let i = 0; i < urls.length; i += BATCH_SIZE) {
+    const batch = urls.slice(i, i + BATCH_SIZE);
     const batchResults = await Promise.all(
       batch.map(async (url) => {
         try {
@@ -187,16 +177,21 @@ export async function fetchUrlGlob(
         }
       }),
     );
-    for (const r of batchResults) {
-      if (r) results.push(r);
-    }
-    if (i + BATCH_SIZE < toFetch.length) {
-      await new Promise(r => setTimeout(r, DELAY_MS));
-    }
+    for (const r of batchResults) { if (r) results.push(r); }
+    if (i + BATCH_SIZE < urls.length) await new Promise(r => setTimeout(r, DELAY_MS));
   }
 
   sp.done(`Fetched ${results.length}/${total} pages`);
   return results;
+}
+
+export async function fetchUrlGlob(
+  pattern: string,
+  opts: { maxPages?: number; noCache?: boolean } = {},
+): Promise<FetchedPage[]> {
+  const maxPages = opts.maxPages ?? 50;
+  const matched = await matchSitemapUrls(pattern);
+  return fetchPages(matched.slice(0, maxPages));
 }
 
 export function isUrlGlob(arg: string): boolean {
