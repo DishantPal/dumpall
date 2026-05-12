@@ -134,7 +134,11 @@ const main = defineCommand({
     },
     qr: {
       type: 'boolean',
-      description: 'Display output as QR code',
+      description: 'Upload content and display shareable QR code',
+    },
+    share: {
+      type: 'boolean',
+      description: 'Upload content and print shareable URL',
     },
     'install-completions': {
       type: 'boolean',
@@ -266,6 +270,7 @@ async function renderAndOutput(
   const treeOnly = args['tree-only'] as boolean | undefined;
   const showTree = args.tree as boolean | undefined;
   const qr = args.qr as boolean | undefined;
+  const share = args.share as boolean | undefined;
 
   if (treeOnly) {
     const tree = generateTree(entries);
@@ -282,6 +287,7 @@ async function renderAndOutput(
       outFile: args.out as string | undefined,
       showTokens: args.tokens as boolean | undefined,
       qr,
+      share,
     });
     return;
   }
@@ -298,6 +304,7 @@ async function renderAndOutput(
     outFile: args.out as string | undefined,
     showTokens: args.tokens as boolean | undefined,
     qr,
+    share,
   });
 }
 
