@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,414 +8,432 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Instrument+Serif:ital@0;1&family=Satoshi:wght@500;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'bg':         '#0a0a0b',
+              'card':       '#121214',
+              'dim':        '#2a2a2f',
+              'hi':         '#4a4a52',
+              't1':         '#f4f4f5',
+              't2':         '#a1a1aa',
+              't3':         '#52525b',
+              'accent':     '#c8ff00',
+            },
+            fontFamily: {
+              sans:  ['Satoshi', '-apple-system', 'sans-serif'],
+              mono:  ['"JetBrains Mono"', 'monospace'],
+              serif: ['"Instrument Serif"', 'Georgia', 'serif'],
+            },
+            maxWidth: { page: '1300px' },
+          }
+        }
+      }
+    </script>
     <style>
-        :root {
-            --bg:#0a0a0b;--bg-card:#121214;
-            --border:#2a2a2f;--border-h:#4a4a52;
-            --t1:#f4f4f5;--t2:#a1a1aa;--t3:#52525b;
-            --accent:#c8ff00;--accent-d:rgba(200,255,0,0.1);
-            --fd:'Instrument Serif',Georgia,serif;
-            --fb:'Satoshi',-apple-system,sans-serif;
-            --fm:'JetBrains Mono',monospace;
-        }
-        *{margin:0;padding:0;box-sizing:border-box}
-        html{scroll-behavior:smooth}
-        body{font-family:var(--fb);background:var(--bg);color:var(--t1);-webkit-font-smoothing:antialiased;overflow-x:hidden;}
-        ::selection{background:var(--accent);color:var(--bg)}
+      html { scroll-behavior: smooth; }
+      body { -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+      ::selection { background: #c8ff00; color: #0a0a0b; }
 
-        /* GRUNGE OVERLAYS */
-        .noise-overlay {
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            pointer-events: none; z-index: 9999; opacity: 0.05; mix-blend-mode: screen;
-            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)"/></svg>');
-        }
-        .bg-collage {
-            position: absolute; top: -50px; left: 0; width: 100%; height: 120%;
-            overflow: hidden; z-index: 0; pointer-events: none; opacity: 0.02;
-        }
-        .bg-ryu {
-            position: absolute; font-family: var(--fb); color: var(--t1); font-weight: 900;
-            font-size: 45rem; top: -10%; left: -5%; line-height: 1; user-select: none;
-        }
+      .noise-overlay {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        pointer-events: none; z-index: 9999; opacity: 0.05; mix-blend-mode: screen;
+        background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)"/></svg>');
+      }
 
-        /* NAV */
-        nav{position:fixed;top:0;width:100%;z-index:100;background:rgba(10,10,11,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
-        .ni{max-width:1300px;margin:0 auto;padding:0 2.5rem;height:64px;display:flex;align-items:center;justify-content:space-between}
-        .nl{font-family:var(--fm);font-size:1.1rem;font-weight:800;color:var(--t1);text-decoration:none;letter-spacing:-.02em}
-        .nl span{color:var(--accent)}
-        .nk{display:flex;align-items:center;gap:2rem}
-        .nk a{font-family:var(--fm);font-size:.85rem;color:var(--t2);text-decoration:none;text-transform:uppercase;letter-spacing:.1em;transition:color .2s; font-weight:600;}
-        .nk a:hover{color:var(--t1)}
+      /* Gradient text on hero heading */
+      .hero-heading {
+        background-image: url('https://www.transparenttextures.com/patterns/stardust.png'),
+                          linear-gradient(180deg, #e8e8ea 0%, rgba(161,161,170,0.5) 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 400;
+      }
+      .hero-heading em {
+        font-style: italic;
+        -webkit-text-fill-color: #c8ff00;
+        background: none;
+        text-shadow: 0 0 20px rgba(200,255,0,0.1);
+      }
 
-        /* LAYOUT & TYPOGRAPHY */
-        .pg{max-width:1300px;margin:0 auto;padding:0 2.5rem}
-        .sr{display:grid;grid-template-columns:220px 1fr;gap:4rem}
-        .sg{padding-top:48px}
-        .sn{font-family:var(--fm);font-size:.85rem;color:var(--t3);letter-spacing:.1em; font-weight:800;}
-        .sm{font-family:var(--fm);font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;color:var(--t2);margin-top:8px; font-weight:600;}
-        .sc{padding-top:48px}
-        .sep{
-            height:2px; margin-top:140px; margin-bottom:20px;
-            background: repeating-linear-gradient(to right, var(--border) 0, var(--border) 4px, transparent 4px, transparent 8px);
-            opacity: 0.8;
-        }
+      /* Dashed separator */
+      .sep {
+        height: 2px; opacity: 0.8;
+        background: repeating-linear-gradient(to right, #2a2a2f 0, #2a2a2f 4px, transparent 4px, transparent 8px);
+      }
 
-        .wh{font-family:var(--fd);font-size:clamp(2.8rem,5vw,4.5rem);line-height:1.05;letter-spacing:-.03em;margin-bottom:32px}
-        .wh em{font-style:italic;color:var(--accent)}
-        .wb{color:var(--t2);font-size:1.25rem;line-height:1.6;max-width:640px; font-weight:500;}
-        .wb+.wb{margin-top:24px}
-        .wb code{font-family:var(--fm);font-size:1.05rem;color:var(--t1); background:var(--border); padding:2px 6px;}
+      /* Feature card tilts — desktop only */
+      .feat-card { min-width: 0; cursor: pointer; }
+      @media (min-width: 1024px) {
+        .feat-card:nth-child(odd)  { transform: rotate(-1deg); }
+        .feat-card:nth-child(even) { transform: rotate(1.5deg); }
+      }
+      .feat-card:hover {
+        transform: translateY(-8px) rotate(0deg) !important;
+        box-shadow: 0 24px 50px rgba(0,0,0,.6);
+        z-index: 10;
+        border-color: #4a4a52;
+      }
 
-        /* HERO */
-        .hero{padding-top:180px; position: relative; overflow: hidden; padding-bottom: 80px;}
-        .hl{font-family:var(--fm);font-size:.8rem;text-transform:uppercase;letter-spacing:.15em;color:var(--t3);margin-bottom:32px; font-weight:800;}
-        .hh{
-            font-family:var(--fd);font-size:clamp(4.5rem,10vw,9.5rem);line-height:.9;letter-spacing:-.04em;margin-bottom:40px;max-width:1000px;
-            background-image: url('https://www.transparenttextures.com/patterns/stardust.png'), linear-gradient(180deg, var(--t1) 0%, var(--t2) 100%);
-            -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-            position: relative; z-index: 2;
-        }
-        .hh em{font-style:italic; -webkit-text-fill-color: var(--accent); background: none; text-shadow: 0 0 20px var(--accent-d);}
-        .hs{font-size:1.4rem;color:var(--t2);max-width:680px;line-height:1.5;margin-bottom:56px; font-weight:500; position:relative; z-index:2;}
-        .hs code{font-family:var(--fm); color:var(--t1); background:var(--border); padding:2px 6px; font-size:1.1rem;}
+      /* Hide scrollbars visually (keep scroll behaviour) */
+      .no-sb { scrollbar-width: none; -ms-overflow-style: none; }
+      .no-sb::-webkit-scrollbar { display: none; }
 
-        .hc{display:inline-flex;align-items:center;gap:20px;background:#111;border:2px solid var(--border);padding:20px 28px; position:relative; z-index:2; box-shadow: 0 20px 40px rgba(0,0,0,0.5);}
-        .hc code{font-family:var(--fm);font-size:1.15rem;color:var(--t1); font-weight:600;}
-        .hc .pr{color:var(--t3);user-select:none;font-weight:800;}
-        .hc .fl{color:var(--accent);}
-        .hc button{font-family:var(--fm);font-size:.75rem;text-transform:uppercase;letter-spacing:.1em;background:var(--accent);color:#000;border:none;padding:8px 16px;cursor:pointer;font-weight:800;transition:all .2s; margin-left: 10px;}
-        .hc button:hover{background:var(--t1);}
-
-        /* MANIFESTO */
-        .manifesto { background: var(--bg-card); padding: 48px; border-left: 4px solid var(--accent); margin-top: 64px; }
-        .manifesto-txt { font-family:var(--fd); font-size:2.5rem; line-height:1.1; color:var(--t1); margin-bottom:20px; }
-        .manifesto p { font-size:1.1rem; color:var(--t2); line-height:1.6; max-width:700px; margin-bottom:16px; font-weight:500;}
-        .manifesto p strong { color:var(--t1); }
-
-        /* THE ARCS (COMPETITORS) */
-        .ag { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-top: 48px; }
-        .ac { background: var(--bg-card); border: 2px solid var(--border); padding: 36px; position: relative; overflow: hidden; transition: transform .2s ease, border-color .2s ease; }
-        .ac:hover { transform: translateY(-4px); border-color: var(--t3); }
-        .ac-bg { position: absolute; right: -15px; bottom: -30px; font-size: 14rem; font-family: var(--fb); font-weight: 900; color: var(--t1); opacity: 0.02; line-height: 1; user-select: none; pointer-events: none;}
-        .ac-t { font-family: var(--fm); font-size: 1.15rem; font-weight: 800; color: var(--t1); text-transform: uppercase; margin-bottom: 4px; position:relative; z-index:2;}
-        .ac-s { font-family: var(--fm); font-size: 0.75rem; color: var(--t3); margin-bottom: 24px; display: block; position:relative; z-index:2;}
-        .ac-l { list-style: none; margin-bottom: 36px; position:relative; z-index:2;}
-        .ac-l li { font-size: 1rem; color: var(--t2); margin-bottom: 12px; font-weight:500;}
-        .ac-l li span { text-decoration: line-through; text-decoration-color: #ff003c; text-decoration-thickness: 2px; }
-        .ac-w { font-family: var(--fb); font-size: 1.05rem; font-weight: 500; color: var(--t1); line-height: 1.6; padding-top: 24px; border-top: 1px dashed var(--border); position:relative; z-index:2;}
-        .ac-w span { color: var(--accent); font-family: var(--fm); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; display: block; margin-bottom: 12px; font-weight: 800;}
-
-        /* STRUCTURED CARDS (Features) */
-        .cg{display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:2rem;margin-top:64px;}
-        .dc{background:var(--bg-card);padding:40px; border:1px solid var(--border); transition:all .3s ease; position:relative;}
-        .dc:nth-child(odd) { transform: rotate(-1deg); }
-        .dc:nth-child(even) { transform: rotate(1.5deg); }
-        .dc:hover{transform:translateY(-8px) rotate(0deg);box-shadow:0 24px 50px rgba(0,0,0,.6);z-index:10;border-color:var(--border-h)}
-        .di{font-family:var(--fm);font-weight:800;font-size:1.5rem;color:var(--accent);margin-bottom:24px; display:inline-block;}
-        .dn{font-family:var(--fm);font-size:1.1rem;font-weight:800;color:var(--t1);margin-bottom:12px; text-transform:uppercase; letter-spacing:0.05em;}
-        .dd{color:var(--t2);font-size:1.05rem;line-height:1.6; font-weight:500;}
-        .dcm{margin-top:24px;font-family:var(--fm);font-size:.9rem;color:var(--t3); background:#000; padding:12px; border:1px solid var(--border);}
-        .dcm .hl { color: var(--accent); }
-
-        /* RAW COMMANDS TABLE */
-        .cmd-block { background:#000; border:1px solid var(--border); padding:32px; font-family:var(--fm); font-size:1rem; line-height:1.8; color:var(--t2); margin-top:40px; overflow-x:auto; white-space: pre;}
-        .cmd-block .w { color: var(--t1); font-weight:600; }
-        .cmd-block .c { color: var(--t3); }
-
-        /* WORKFLOWS */
-        .wi{display:grid;grid-template-columns:1fr 1.5fr;gap:4rem;padding:48px 0;border-bottom:1px solid var(--border);align-items:start}
-        .wi:last-child{border-bottom:none}
-        .wl{font-size:1.25rem;font-weight:700;color:var(--t1)}
-        .wsl{font-size:1.05rem;color:var(--t2);margin-top:12px;line-height:1.5;font-weight:500}
-        .wfc{background:#000; border:1px solid var(--border); padding:24px 32px; font-family:var(--fm); font-size:1rem; line-height:1.8; color:var(--t1)}
-        .wfc .cm{color:var(--t3)}.wfc .fl{color:var(--accent)}.wfc .op{color:#e06c75}
-
-        /* FOOTER */
-        footer{border-top:1px solid var(--border);padding:48px 0; margin-top: 100px;}
-        .fi{max-width:1300px;margin:0 auto;padding:0 2.5rem;display:flex;justify-content:space-between;align-items:center}
-        .fl2{font-family:var(--fm);font-size:.85rem;color:var(--t3);display:flex;align-items:center;gap:24px; font-weight:600;}
-        .fl2 .fll{font-weight:800;color:var(--t2);font-size:1rem}
-        .flk{display:flex;gap:32px}
-        .flk a{font-family:var(--fm);font-size:.85rem;color:var(--t2);text-decoration:none;transition:color .2s; font-weight:600; text-transform:uppercase; letter-spacing:0.1em;}
-        .flk a:hover{color:var(--t1)}
-        .fe{max-width:1300px;margin:0 auto;padding:0 2.5rem; text-align:center; font-family:var(--fm); font-size:0.65rem; color:var(--t3); opacity:0.6; margin-top:40px; letter-spacing:0.15em; text-transform:uppercase;}
-
-        /* ANIM */
-        .rv{opacity:0;transform:translateY(30px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
-        .rv.vis{opacity:1;transform:translateY(0)}
-
-        @media(max-width:900px){
-            .pg{padding:0 1.5rem}.ni{padding:0 1.5rem}
-            .sr{grid-template-columns:1fr;gap:0}
-            .sg{padding-top:32px;display:flex;gap:12px;align-items:baseline;padding-bottom:0}
-            .sm{margin-top:0}.sc{padding-top:20px}.sep{margin-top:120px}
-            .hero{padding-top:140px}
-            .wi{grid-template-columns:1fr;gap:1.5rem; padding: 32px 0;}
-            .fi{flex-direction:column;gap:1.5rem;text-align:center}
-            .bg-collage { display: none; }
-        }
+      /* Scroll reveal */
+      .rv { opacity: 0; transform: translateY(30px); transition: opacity .7s cubic-bezier(.16,1,.3,1), transform .7s cubic-bezier(.16,1,.3,1); }
+      .rv.vis { opacity: 1; transform: translateY(0); }
     </style>
 </head>
-<body>
+<body class="font-sans bg-bg text-t1">
 
 <div class="noise-overlay"></div>
 
-<nav><div class="ni">
-    <a href="#" class="nl">dumpall<span>.</span></a>
-    <div class="nk">
-        <a href="#arcs">The Arcs</a>
-        <a href="#features">Features</a>
-        <a href="#reference">Reference</a>
-        <a href="https://github.com/ThisIsntMyId/dumpall" target="_blank">GitHub</a>
+<!-- NAV -->
+<nav class="fixed top-0 w-full z-[100] border-b border-dim" style="background:rgba(10,10,11,0.85);backdrop-filter:blur(12px);">
+  <div class="max-w-page mx-auto px-4 sm:px-10 h-14 sm:h-16 flex items-center justify-between">
+    <a href="#" class="font-mono text-[1.1rem] font-extrabold text-t1 no-underline tracking-tight">
+      dumpall<span class="text-accent">.</span>
+    </a>
+    <div class="flex items-center gap-3 sm:gap-8">
+      <a href="#arcs"      class="font-mono text-[0.65rem] sm:text-[0.85rem] text-t2 no-underline uppercase tracking-[0.05em] sm:tracking-[0.1em] font-semibold hover:text-t1 transition-colors whitespace-nowrap">The Arcs</a>
+      <a href="#features"  class="font-mono text-[0.65rem] sm:text-[0.85rem] text-t2 no-underline uppercase tracking-[0.05em] sm:tracking-[0.1em] font-semibold hover:text-t1 transition-colors whitespace-nowrap">Features</a>
+      <a href="#reference" class="font-mono text-[0.65rem] sm:text-[0.85rem] text-t2 no-underline uppercase tracking-[0.05em] sm:tracking-[0.1em] font-semibold hover:text-t1 transition-colors whitespace-nowrap">Reference</a>
+      <a href="https://github.com/ThisIsntMyId/dumpall" target="_blank" class="font-mono text-[0.65rem] sm:text-[0.85rem] text-t2 no-underline uppercase tracking-[0.05em] sm:tracking-[0.1em] font-semibold hover:text-t1 transition-colors whitespace-nowrap">GitHub</a>
     </div>
-</div></nav>
+  </div>
+</nav>
 
-<div class="pg">
+<div class="max-w-page mx-auto px-6 lg:px-10">
 
-<section class="hero">
-    <div class="bg-collage">
-        <div class="bg-ryu">流</div>
+  <!-- HERO -->
+  <section class="pt-[100px] sm:pt-[140px] lg:pt-[180px] pb-12 lg:pb-20 relative overflow-hidden">
+    <!-- Desktop: large left watermark -->
+    <div class="absolute -top-[10%] -left-[5%] w-full h-[120%] overflow-hidden opacity-[0.02] pointer-events-none select-none hidden lg:block">
+      <div class="font-sans font-black text-t1 leading-none" style="font-size:45rem;">流</div>
+    </div>
+    <!-- Mobile/tablet: smaller, bottom-right -->
+    <div class="absolute bottom-0 right-[-2%] overflow-hidden opacity-[0.04] pointer-events-none select-none block lg:hidden">
+      <div class="font-sans font-black text-t1 leading-none" style="font-size:18rem;">流</div>
     </div>
 
-    <div style="position: relative; z-index: 2;">
-        <p class="hl">v2.0.0 — The Universal Context Compiler</p>
-        <h1 class="hh">Any source.<br>Any <em>text box.</em></h1>
-        <p class="hs">Channel the context. From messy local folders to web-based AI builders, <code>dumpall</code> is the fluid pipe that routes scattered code into one clean, pasteable stream.</p>
-        <div class="hc">
-            <code><span class="pr">></span> npx dumpall src/ <span class="fl">-c</span></code>
-            <button onclick="navigator.clipboard.writeText('npx dumpall src/ -c').then(()=>{this.textContent='COPIED!';setTimeout(()=>this.textContent='COPY',2000)})">Copy</button>
-        </div>
+    <div class="relative z-[2]">
+      <p class="font-mono text-[0.8rem] uppercase tracking-[0.15em] text-t3 mb-8 font-extrabold">v2.0.0 — The Universal Context Compiler</p>
+      <h1 class="hero-heading font-serif leading-[0.9] tracking-[-0.04em] mb-10 max-w-[1000px]"
+          style="font-size: clamp(4.5rem, 10vw, 9.5rem);">
+        Any source.<br>Any <em>text box.</em>
+      </h1>
+      <p class="text-t2 max-w-[680px] leading-[1.5] mb-14 font-medium relative z-[2]" style="font-size:1.4rem;">
+        Channel the context. From messy local folders to web-based AI builders,
+        <code class="font-mono text-t1 bg-dim px-[6px] py-[2px] text-[1.1rem]">dumpall</code>
+        is the fluid pipe that routes scattered code into one clean, pasteable stream.
+      </p>
+      <div class="inline-flex flex-wrap items-center gap-3 sm:gap-5 bg-[#111] border-2 border-dim px-5 sm:px-7 py-5 relative z-[2] shadow-[0_20px_40px_rgba(0,0,0,0.5)]">
+        <code class="font-mono text-[0.9rem] sm:text-[1.15rem] text-t1 font-semibold">
+          <span class="text-t3 select-none font-extrabold">&gt;</span> npx dumpall src/ <span class="text-accent">-c</span>
+        </code>
+        <button
+          onclick="navigator.clipboard.writeText('npx dumpall src/ -c').then(()=>{this.textContent='COPIED!';setTimeout(()=>this.textContent='COPY',2000)})"
+          class="font-mono text-[0.75rem] uppercase tracking-[0.1em] bg-accent text-bg border-none px-4 py-2 cursor-pointer font-extrabold transition-all hover:bg-t1 w-full sm:w-auto"
+        >Copy</button>
+      </div>
     </div>
-</section>
+  </section>
 
-<section class="rv" id="origin" style="margin-top: 40px;">
-    <div class="manifesto">
-        <div class="manifesto-txt">The flow state of text.</div>
-        <p>You have a folder. You need it in a text box. That's it.</p>
-        <p>dumpall isn't just an "AI prompting tool." It's a universal utility pipe. Whether you're feeding web-based builders like <strong>Lovable</strong> and <strong>Bolt</strong>, seeding a <strong>ClickUp doc</strong> for knowledge handoff, prepping context for a human code review, or writing a <strong>CI pipeline script</strong>—dumpall aggregates the noise into a single, predictable markdown file. No black magic.</p>
+  <!-- MANIFESTO -->
+  <section class="rv mt-10" id="origin">
+    <div class="bg-card px-6 sm:px-12 py-8 sm:py-12 border-l-4 border-accent">
+      <div class="font-serif text-[1.6rem] sm:text-[2.5rem] leading-[1.1] text-t1 mb-5">The flow state of text.</div>
+      <p class="text-[0.95rem] sm:text-[1.1rem] text-t2 leading-[1.6] max-w-[700px] mb-4 font-medium">You have a folder. You need it in a text box. That's it.</p>
+      <p class="text-[0.95rem] sm:text-[1.1rem] text-t2 leading-[1.6] max-w-[700px] font-medium">
+        dumpall isn't just an "AI prompting tool." It's a universal utility pipe. Whether you're feeding web-based builders like <strong class="text-t1">Lovable</strong> and <strong class="text-t1">Bolt</strong>, seeding a <strong class="text-t1">ClickUp doc</strong> for knowledge handoff, prepping context for a human code review, or writing a <strong class="text-t1">CI pipeline script</strong>—dumpall aggregates the noise into a single, predictable markdown file. No black magic.
+      </p>
     </div>
-</section>
+  </section>
 
-<div class="sep"></div>
+  <div class="sep mt-20 lg:mt-[140px] mb-5"></div>
 
-<section class="rv" id="arcs">
-    <div class="sr">
-        <div class="sg"><div class="sn">01</div><div class="sm">The Arcs</div></div>
-        <div class="sc">
-            <h2 class="wh">Escaping the <br><em>walled gardens.</em></h2>
+  <!-- THE ARCS -->
+  <section class="rv" id="arcs">
+    <div class="grid lg:grid-cols-[220px_1fr] gap-0 lg:gap-16">
+      <div class="pt-8 flex lg:block items-baseline gap-3 lg:gap-0 pb-0 lg:pb-0">
+        <div class="font-mono text-[0.85rem] text-t3 tracking-[0.1em] font-extrabold">01</div>
+        <div class="font-mono text-[0.75rem] uppercase tracking-[0.15em] text-t2 mt-0 lg:mt-2 font-semibold">The Arcs</div>
+      </div>
+      <div class="pt-5 lg:pt-12 min-w-0">
+        <h2 class="font-serif leading-[1.05] tracking-[-0.03em] mb-8" style="font-size:clamp(2rem,5vw,4.5rem);">
+          Escaping the <br><em class="italic text-accent">walled gardens.</em>
+        </h2>
 
-            <div class="ag">
-                <div class="ac">
-                    <div class="ac-bg">01</div>
-                    <div class="ac-t">Vs. Bloated Packagers</div>
-                    <span class="ac-s">(repomix, code2prompt)</span>
-                    <ul class="ac-l">
-                        <li><span>Requires Python/Rust environments</span></li>
-                        <li><span>Heavy config files</span></li>
-                        <li><span>Assumes you're in a Git repo</span></li>
-                    </ul>
-                    <div class="ac-w">
-                        <span>The Dumpall Way</span>
-                        Zero setup. <code>npx</code> ready. Works on raw URLs or local folders instantly. Pure CLI speed.
-                    </div>
-                </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-12">
 
-                <div class="ac">
-                    <div class="ac-bg">02</div>
-                    <div class="ac-t">Vs. Walled IDEs</div>
-                    <span class="ac-s">(Cursor, Windsurf)</span>
-                    <ul class="ac-l">
-                        <li><span>Trapped in current workspace</span></li>
-                        <li><span>Can't index remote GitHub repos</span></li>
-                        <li><span>Hard to reference "that old project"</span></li>
-                    </ul>
-                    <div class="ac-w">
-                        <span>The Dumpall Way</span>
-                        Cross-pollinate context. Run dumpall to grab files from an entirely different project without ruining your IDE's index.
-                    </div>
-                </div>
-
-                <div class="ac">
-                    <div class="ac-bg">03</div>
-                    <div class="ac-t">Vs. Terminal Traps</div>
-                    <span class="ac-s">(Claude Code, Copilot CLI)</span>
-                    <ul class="ac-l">
-                        <li><span>Confined to terminal execution</span></li>
-                        <li><span>Blind to external Web Docs</span></li>
-                        <li><span>Useless for Web AI builders</span></li>
-                    </ul>
-                    <div class="ac-w">
-                        <span>The Dumpall Way</span>
-                        Pipe it anywhere. Fetch a web sitemap, format to markdown, and pipe to clipboard to paste directly into Lovable, Bolt, or ChatGPT web.
-                    </div>
-                </div>
+          <div class="bg-card border-2 border-dim p-7 sm:p-9 relative overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:border-hi cursor-pointer">
+            <div class="absolute right-[-15px] bottom-[-30px] font-sans font-black text-t1 opacity-[0.02] leading-none select-none pointer-events-none" style="font-size:14rem;">01</div>
+            <div class="font-mono text-[1.15rem] font-extrabold text-t1 uppercase mb-1 relative z-[2]">Vs. Bloated Packagers</div>
+            <span class="font-mono text-[0.75rem] text-t3 mb-6 block relative z-[2]">(repomix, code2prompt)</span>
+            <ul class="list-none mb-9 relative z-[2]">
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Requires Python/Rust environments</span></li>
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Heavy config files</span></li>
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Assumes you're in a Git repo</span></li>
+            </ul>
+            <div class="text-[1.05rem] font-medium text-t1 leading-[1.6] pt-6 border-t border-dashed border-dim relative z-[2]">
+              <span class="text-accent font-mono text-[0.8rem] uppercase tracking-[0.1em] block mb-3 font-extrabold">The Dumpall Way</span>
+              Zero setup. <code class="font-mono">npx</code> ready. Works on raw URLs or local folders instantly. Pure CLI speed.
             </div>
+          </div>
+
+          <div class="bg-card border-2 border-dim p-7 sm:p-9 relative overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:border-hi cursor-pointer">
+            <div class="absolute right-[-15px] bottom-[-30px] font-sans font-black text-t1 opacity-[0.02] leading-none select-none pointer-events-none" style="font-size:14rem;">02</div>
+            <div class="font-mono text-[1.15rem] font-extrabold text-t1 uppercase mb-1 relative z-[2]">Vs. Walled IDEs</div>
+            <span class="font-mono text-[0.75rem] text-t3 mb-6 block relative z-[2]">(Cursor, Windsurf)</span>
+            <ul class="list-none mb-9 relative z-[2]">
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Trapped in current workspace</span></li>
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Can't index remote GitHub repos</span></li>
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Hard to reference "that old project"</span></li>
+            </ul>
+            <div class="text-[1.05rem] font-medium text-t1 leading-[1.6] pt-6 border-t border-dashed border-dim relative z-[2]">
+              <span class="text-accent font-mono text-[0.8rem] uppercase tracking-[0.1em] block mb-3 font-extrabold">The Dumpall Way</span>
+              Cross-pollinate context. Run dumpall to grab files from an entirely different project without ruining your IDE's index.
+            </div>
+          </div>
+
+          <div class="bg-card border-2 border-dim p-7 sm:p-9 relative overflow-hidden transition-all duration-200 hover:-translate-y-1 hover:border-hi cursor-pointer">
+            <div class="absolute right-[-15px] bottom-[-30px] font-sans font-black text-t1 opacity-[0.02] leading-none select-none pointer-events-none" style="font-size:14rem;">03</div>
+            <div class="font-mono text-[1.15rem] font-extrabold text-t1 uppercase mb-1 relative z-[2]">Vs. Terminal Traps</div>
+            <span class="font-mono text-[0.75rem] text-t3 mb-6 block relative z-[2]">(Claude Code, Copilot CLI)</span>
+            <ul class="list-none mb-9 relative z-[2]">
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Confined to terminal execution</span></li>
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Blind to external Web Docs</span></li>
+              <li class="text-t2 mb-3 font-medium"><span class="line-through decoration-[#ff003c] decoration-2">Useless for Web AI builders</span></li>
+            </ul>
+            <div class="text-[1.05rem] font-medium text-t1 leading-[1.6] pt-6 border-t border-dashed border-dim relative z-[2]">
+              <span class="text-accent font-mono text-[0.8rem] uppercase tracking-[0.1em] block mb-3 font-extrabold">The Dumpall Way</span>
+              Pipe it anywhere. Fetch a web sitemap, format to markdown, and pipe to clipboard to paste directly into Lovable, Bolt, or ChatGPT web.
+            </div>
+          </div>
+
         </div>
+      </div>
     </div>
-</section>
+  </section>
 
-<div class="sep"></div>
+  <div class="sep mt-20 lg:mt-[140px] mb-5"></div>
 
-<section class="rv" id="features">
-    <div class="sr">
-        <div class="sg"><div class="sn">02</div><div class="sm">Capabilities</div></div>
-        <div class="sc">
-            <h2 class="wh">Point at anything.<br>Exclude the <em>noise.</em></h2>
-        </div>
+  <!-- FEATURES -->
+  <section class="rv" id="features">
+    <div class="grid lg:grid-cols-[220px_1fr] gap-0 lg:gap-16">
+      <div class="pt-8 flex lg:block items-baseline gap-3 lg:gap-0">
+        <div class="font-mono text-[0.85rem] text-t3 tracking-[0.1em] font-extrabold">02</div>
+        <div class="font-mono text-[0.75rem] uppercase tracking-[0.15em] text-t2 mt-0 lg:mt-2 font-semibold">Capabilities</div>
+      </div>
+      <div class="pt-5 lg:pt-12 min-w-0">
+        <h2 class="font-serif leading-[1.05] tracking-[-0.03em]" style="font-size:clamp(2rem,5vw,4.5rem);">
+          Point at anything.<br>Exclude the <em class="italic text-accent">noise.</em>
+        </h2>
+      </div>
     </div>
 
-    <div class="cg">
-        <div class="dc">
-            <div class="di">@</div>
-            <div class="dn">Interactive Picker</div>
-            <div class="dd">Fuzzy-search and select files instantly. Works on local directories, URL sitemaps, and remote GitHub repos.</div>
-            <div class="dcm">> dumpall <span class="hl">@</span></div>
-        </div>
-        <div class="dc">
-            <div class="di">↗</div>
-            <div class="dn">URLs & Globs</div>
-            <div class="dd">Fetch any web page. Use globs to pull entire documentation sections via sitemap automatically.</div>
-            <div class="dcm">> dumpall <span class="hl">"https://docs.api.com/**"</span></div>
-        </div>
-        <div class="dc">
-            <div class="di">&lt;/&gt;</div>
-            <div class="dn">Remote Repos</div>
-            <div class="dd">Point at a GitHub/GitLab URL. Downloads, unpacks, and dumps. Repo zips are cached locally for speed.</div>
-            <div class="dcm">> dumpall <span class="hl">github.com/owner/repo</span></div>
-        </div>
-        <div class="dc">
-            <div class="di">#</div>
-            <div class="dn">Token Budgets</div>
-            <div class="dd">Know your context size. Estimate tokens or aggressively truncate output to fit your exact LLM context window.</div>
-            <div class="dcm">> dumpall . <span class="hl">--max-tokens 50000</span></div>
-        </div>
-        <div class="dc">
-            <div class="di">{ }</div>
-            <div class="dn">Format Agnostic</div>
-            <div class="dd">Markdown is default for chat, but structured XML and JSON outputs are built-in for strict API workflows.</div>
-            <div class="dcm">> dumpall src/ <span class="hl">--format xml</span></div>
-        </div>
-        <div class="dc">
-            <div class="di">🔗</div>
-            <div class="dn">Share & Scan</div>
-            <div class="dd">Upload your dump instantly to paste.rs or catbox.moe. Generate a terminal QR code to pass context to mobile.</div>
-            <div class="dcm">> dumpall src/ <span class="hl">--share --qr</span></div>
-        </div>
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-16">
+
+      <div class="feat-card bg-card p-8 sm:p-10 border border-dim transition-all duration-300 relative">
+        <div class="font-mono font-extrabold text-[1.5rem] text-accent mb-6 inline-block">@</div>
+        <div class="font-mono text-[1.1rem] font-extrabold text-t1 mb-3 uppercase tracking-[0.05em]">Interactive Picker</div>
+        <div class="text-t2 text-[1.05rem] leading-[1.6] font-medium">Fuzzy-search and select files instantly. Works on local directories, URL sitemaps, and remote GitHub repos.</div>
+        <div class="mt-6 font-mono text-[0.9rem] text-t3 bg-black px-3 py-3 border border-dim no-sb overflow-x-auto whitespace-nowrap">&gt; dumpall <span class="text-accent">@</span></div>
+      </div>
+
+      <div class="feat-card bg-card p-8 sm:p-10 border border-dim transition-all duration-300 relative">
+        <div class="font-mono font-extrabold text-[1.5rem] text-accent mb-6 inline-block">↗</div>
+        <div class="font-mono text-[1.1rem] font-extrabold text-t1 mb-3 uppercase tracking-[0.05em]">URLs & Globs</div>
+        <div class="text-t2 text-[1.05rem] leading-[1.6] font-medium">Fetch any web page. Use globs to pull entire documentation sections via sitemap automatically.</div>
+        <div class="mt-6 font-mono text-[0.9rem] text-t3 bg-black px-3 py-3 border border-dim no-sb overflow-x-auto whitespace-nowrap">&gt; dumpall <span class="text-accent">"https://docs.api.com/**"</span></div>
+      </div>
+
+      <div class="feat-card bg-card p-8 sm:p-10 border border-dim transition-all duration-300 relative">
+        <div class="font-mono font-extrabold text-[1.5rem] text-accent mb-6 inline-block">&lt;/&gt;</div>
+        <div class="font-mono text-[1.1rem] font-extrabold text-t1 mb-3 uppercase tracking-[0.05em]">Remote Repos</div>
+        <div class="text-t2 text-[1.05rem] leading-[1.6] font-medium">Point at a GitHub/GitLab URL. Downloads, unpacks, and dumps. Repo zips are cached locally for speed.</div>
+        <div class="mt-6 font-mono text-[0.9rem] text-t3 bg-black px-3 py-3 border border-dim no-sb overflow-x-auto whitespace-nowrap">&gt; dumpall <span class="text-accent">github.com/owner/repo</span></div>
+      </div>
+
+      <div class="feat-card bg-card p-8 sm:p-10 border border-dim transition-all duration-300 relative">
+        <div class="font-mono font-extrabold text-[1.5rem] text-accent mb-6 inline-block">#</div>
+        <div class="font-mono text-[1.1rem] font-extrabold text-t1 mb-3 uppercase tracking-[0.05em]">Token Budgets</div>
+        <div class="text-t2 text-[1.05rem] leading-[1.6] font-medium">Know your context size. Estimate tokens or aggressively truncate output to fit your exact LLM context window.</div>
+        <div class="mt-6 font-mono text-[0.9rem] text-t3 bg-black px-3 py-3 border border-dim no-sb overflow-x-auto whitespace-nowrap">&gt; dumpall . <span class="text-accent">--max-tokens 50000</span></div>
+      </div>
+
+      <div class="feat-card bg-card p-8 sm:p-10 border border-dim transition-all duration-300 relative">
+        <div class="font-mono font-extrabold text-[1.5rem] text-accent mb-6 inline-block">{ }</div>
+        <div class="font-mono text-[1.1rem] font-extrabold text-t1 mb-3 uppercase tracking-[0.05em]">Format Agnostic</div>
+        <div class="text-t2 text-[1.05rem] leading-[1.6] font-medium">Markdown is default for chat, but structured XML and JSON outputs are built-in for strict API workflows.</div>
+        <div class="mt-6 font-mono text-[0.9rem] text-t3 bg-black px-3 py-3 border border-dim no-sb overflow-x-auto whitespace-nowrap">&gt; dumpall src/ <span class="text-accent">--format xml</span></div>
+      </div>
+
+      <div class="feat-card bg-card p-8 sm:p-10 border border-dim transition-all duration-300 relative">
+        <div class="font-mono font-extrabold text-[1.5rem] text-accent mb-6 inline-block">🔗</div>
+        <div class="font-mono text-[1.1rem] font-extrabold text-t1 mb-3 uppercase tracking-[0.05em]">Share & Scan</div>
+        <div class="text-t2 text-[1.05rem] leading-[1.6] font-medium">Upload your dump instantly to paste.rs or catbox.moe. Generate a terminal QR code to pass context to mobile.</div>
+        <div class="mt-6 font-mono text-[0.9rem] text-t3 bg-black px-3 py-3 border border-dim no-sb overflow-x-auto whitespace-nowrap">&gt; dumpall src/ <span class="text-accent">--share --qr</span></div>
+      </div>
+
     </div>
-</section>
+  </section>
 
-<div class="sep"></div>
+  <div class="sep mt-20 lg:mt-[140px] mb-5"></div>
 
-<section class="rv" id="reference">
-    <div class="sr">
-        <div class="sg"><div class="sn">03</div><div class="sm">Reference</div></div>
-        <div class="sc">
-            <h2 class="wh">Zero ceremony.<br><em>Run it</em> anywhere.</h2>
-            <div class="cmd-block"><span class="c"># Run without installing</span>
-<span class="w">></span> npx dumpall src/
+  <!-- REFERENCE -->
+  <section class="rv" id="reference">
+    <div class="grid lg:grid-cols-[220px_1fr] gap-0 lg:gap-16">
+      <div class="pt-8 flex lg:block items-baseline gap-3 lg:gap-0">
+        <div class="font-mono text-[0.85rem] text-t3 tracking-[0.1em] font-extrabold">03</div>
+        <div class="font-mono text-[0.75rem] uppercase tracking-[0.15em] text-t2 mt-0 lg:mt-2 font-semibold">Reference</div>
+      </div>
+      <div class="pt-5 lg:pt-12 min-w-0">
 
-<span class="c"># Or install globally</span>
-<span class="w">></span> npm install -g dumpall</div>
+        <h2 class="font-serif leading-[1.05] tracking-[-0.03em] mb-8" style="font-size:clamp(2rem,5vw,4.5rem);">
+          Zero ceremony.<br><em class="italic text-accent">Run it</em> anywhere.
+        </h2>
+        <div class="bg-black border border-dim px-4 sm:px-8 py-6 sm:py-8 font-mono text-[0.75rem] sm:text-[1rem] leading-[1.8] text-t2 mt-10 no-sb overflow-x-auto whitespace-pre"><span class="text-t3"># Run without installing</span>
+<span class="text-t1 font-semibold">></span> npx dumpall src/
 
-            <h2 class="wh" style="margin-top: 80px;">One mental model.<br>Every <em>flag.</em></h2>
-            <div class="cmd-block"><span class="c"># CORE I/O</span>
-<span class="w">--clip, -c</span>               Copy output to clipboard
-<span class="w">--out, -o &lt;file&gt;</span>         Write output to file
-<span class="w">--note, -m [text]</span>        Prepend a prompt (omit value for interactive)
-<span class="w">--format &lt;fmt&gt;</span>           Output format: md (default), xml, json
-<span class="w">--stdin</span>                  Read sources from stdin (one per line)
-<span class="w">--share</span>                  Upload and print a shareable URL
-<span class="w">--qr</span>                     Upload and display a scannable QR code
+<span class="text-t3"># Or install globally</span>
+<span class="text-t1 font-semibold">></span> npm install -g dumpall</div>
 
-<span class="c"># FILTERING</span>
-<span class="w">--exclude, -e &lt;pat&gt;</span>      Exclude glob pattern
-<span class="w">--grep &lt;pattern&gt;</span>         Only include files containing pattern
-<span class="w">--max-file-size &lt;size&gt;</span>   Skip files larger than size (default: 1MB)
+        <h2 class="font-serif leading-[1.05] tracking-[-0.03em] mt-20 mb-8" style="font-size:clamp(2rem,5vw,4.5rem);">
+          One mental model.<br>Every <em class="italic text-accent">flag.</em>
+        </h2>
+        <div class="bg-black border border-dim px-4 sm:px-8 py-6 sm:py-8 font-mono text-[0.75rem] sm:text-[1rem] leading-[1.8] text-t2 no-sb overflow-x-auto whitespace-pre"><span class="text-t3"># CORE I/O</span>
+<span class="text-t1 font-semibold">--clip, -c</span>               Copy output to clipboard
+<span class="text-t1 font-semibold">--out, -o &lt;file&gt;</span>         Write output to file
+<span class="text-t1 font-semibold">--note, -m [text]</span>        Prepend a prompt (omit value for interactive)
+<span class="text-t1 font-semibold">--format &lt;fmt&gt;</span>           Output format: md (default), xml, json
+<span class="text-t1 font-semibold">--stdin</span>                  Read sources from stdin (one per line)
+<span class="text-t1 font-semibold">--share</span>                  Upload and print a shareable URL
+<span class="text-t1 font-semibold">--qr</span>                     Upload and display a scannable QR code
 
-<span class="c"># CONTEXT MANAGEMENT</span>
-<span class="w">--tree-only</span>              Output only the directory tree
-<span class="w">--tokens</span>                 Show estimated token count
-<span class="w">--max-tokens &lt;n&gt;</span>         Truncate to budget (drops largest files first)
+<span class="text-t3"># FILTERING</span>
+<span class="text-t1 font-semibold">--exclude, -e &lt;pat&gt;</span>      Exclude glob pattern
+<span class="text-t1 font-semibold">--grep &lt;pattern&gt;</span>         Only include files containing pattern
+<span class="text-t1 font-semibold">--max-file-size &lt;size&gt;</span>   Skip files larger than size (default: 1MB)
 
-<span class="c"># SYSTEM & CACHE</span>
-<span class="w">--follow-symlinks</span>        Follow symlinks during traversal
-<span class="w">--strict</span>                 Abort on any error instead of skipping
-<span class="w">--no-cache</span>               Bypass cache for remote fetching
-<span class="w">--cache-ttl &lt;dur&gt;</span>        Cache TTL for branch refs (e.g. 1h, 30m, 0)
-<span class="w">--max-pages &lt;n&gt;</span>          Max pages to fetch for URL globs (default: 50)
-<span class="w">--install-completions</span>    Install shell completions (bash/zsh/fish)</div>
+<span class="text-t3"># CONTEXT MANAGEMENT</span>
+<span class="text-t1 font-semibold">--tree-only</span>              Output only the directory tree
+<span class="text-t1 font-semibold">--tokens</span>                 Show estimated token count
+<span class="text-t1 font-semibold">--max-tokens &lt;n&gt;</span>         Truncate to budget (drops largest files first)
 
-            <h2 class="wh" style="margin-top: 80px;">Environment <em>Variables.</em></h2>
-            <div class="cmd-block"><span class="w">DUMPALL_FORMAT</span>           Default output format (md, xml, json)
-<span class="w">DUMPALL_MAX_PAGES</span>        Default max pages for URL glob fetching
-<span class="w">DUMPALL_CACHE_DIR</span>        Override cache dir (default: ~/.cache/dumpall)
+<span class="text-t3"># SYSTEM & CACHE</span>
+<span class="text-t1 font-semibold">--follow-symlinks</span>        Follow symlinks during traversal
+<span class="text-t1 font-semibold">--strict</span>                 Abort on any error instead of skipping
+<span class="text-t1 font-semibold">--no-cache</span>               Bypass cache for remote fetching
+<span class="text-t1 font-semibold">--cache-ttl &lt;dur&gt;</span>        Cache TTL for branch refs (e.g. 1h, 30m, 0)
+<span class="text-t1 font-semibold">--max-pages &lt;n&gt;</span>          Max pages to fetch for URL globs (default: 50)
+<span class="text-t1 font-semibold">--install-completions</span>    Install shell completions (bash/zsh/fish)</div>
 
-<span class="c"># PRIVATE REPO AUTHENTICATION</span>
-<span class="c"># Set token manually or let dumpall fallback to 'gh auth login'</span>
-<span class="w">GITHUB_TOKEN</span>             Token for private GitHub repos
-<span class="w">GITLAB_TOKEN</span>             Token for private GitLab repos
-<span class="w">BITBUCKET_TOKEN</span>          Token for private Bitbucket repos</div>
-        </div>
+        <h2 class="font-serif leading-[1.05] tracking-[-0.03em] mt-20 mb-8" style="font-size:clamp(2rem,5vw,4.5rem);">
+          Environment <em class="italic text-accent">Variables.</em>
+        </h2>
+        <div class="bg-black border border-dim px-4 sm:px-8 py-6 sm:py-8 font-mono text-[0.75rem] sm:text-[1rem] leading-[1.8] text-t2 no-sb overflow-x-auto whitespace-pre"><span class="text-t1 font-semibold">DUMPALL_FORMAT</span>           Default output format (md, xml, json)
+<span class="text-t1 font-semibold">DUMPALL_MAX_PAGES</span>        Default max pages for URL glob fetching
+<span class="text-t1 font-semibold">DUMPALL_CACHE_DIR</span>        Override cache dir (default: ~/.cache/dumpall)
+
+<span class="text-t3"># PRIVATE REPO AUTHENTICATION</span>
+<span class="text-t3"># Set token manually or let dumpall fallback to 'gh auth login'</span>
+<span class="text-t1 font-semibold">GITHUB_TOKEN</span>             Token for private GitHub repos
+<span class="text-t1 font-semibold">GITLAB_TOKEN</span>             Token for private GitLab repos
+<span class="text-t1 font-semibold">BITBUCKET_TOKEN</span>          Token for private Bitbucket repos</div>
+
+      </div>
     </div>
-</section>
+  </section>
 
-<div class="sep"></div>
+  <div class="sep mt-20 lg:mt-[140px] mb-5"></div>
 
-<section class="rv" id="workflows">
-    <div class="sr">
-        <div class="sg"><div class="sn">04</div><div class="sm">Workflows</div></div>
-        <div class="sc">
-            <h2 class="wh">In <em>practice.</em></h2>
+  <!-- WORKFLOWS -->
+  <section class="rv" id="workflows">
+    <div class="grid lg:grid-cols-[220px_1fr] gap-0 lg:gap-16">
+      <div class="pt-8 flex lg:block items-baseline gap-3 lg:gap-0">
+        <div class="font-mono text-[0.85rem] text-t3 tracking-[0.1em] font-extrabold">04</div>
+        <div class="font-mono text-[0.75rem] uppercase tracking-[0.15em] text-t2 mt-0 lg:mt-2 font-semibold">Workflows</div>
+      </div>
+      <div class="pt-5 lg:pt-12 min-w-0">
+        <h2 class="font-serif leading-[1.05] tracking-[-0.03em] mb-0" style="font-size:clamp(2rem,5vw,4.5rem);">
+          In <em class="italic text-accent">practice.</em>
+        </h2>
 
-            <div class="wi">
-                <div><div class="wl">Feed AI your codebase</div><div class="wsl">Grab source, exclude noise, clipboard ready.</div></div>
-                <div class="wfc"><span class="cm"># everything in src, skip tests, copy</span><br>dumpall src/ <span class="fl">-e</span> "*.test.ts" <span class="fl">-c</span></div>
-            </div>
-
-            <div class="wi">
-                <div><div class="wl">Mix Everything</div><div class="wsl">Local code, remote docs, and instructions—one paste.</div></div>
-                <div class="wfc"><span class="cm"># code + docs + interactive prompt</span><br>dumpall src/ https://docs.api.com/auth <span class="fl">-m -c</span></div>
-            </div>
-
-            <div class="wi">
-                <div><div class="wl">Debug across files</div><div class="wsl">Find every file touching an endpoint using inline grep.</div></div>
-                <div class="wfc"><span class="cm"># grep for the pattern, dump matches</span><br>dumpall . <span class="op">--grep</span> "/api/users" <span class="fl">-c</span></div>
-            </div>
-
-            <div class="wi">
-                <div><div class="wl">Pipe from Git</div><div class="wsl">Only dump the files changed in your recent commits.</div></div>
-                <div class="wfc"><span class="cm"># last 3 commits → stdin → clipboard</span><br>git diff --name-only HEAD~3 | dumpall <span class="fl">--stdin -c</span></div>
-            </div>
-
-            <div class="wi">
-                <div><div class="wl">Browse a private repo</div><div class="wsl">Authenticate with token, open interactive picker.</div></div>
-                <div class="wfc"><span class="cm"># pass token inline, fuzzy search, copy</span><br>GITHUB_TOKEN=ghp_xxx dumpall github.com/user/priv <span class="op">@</span> <span class="fl">-c</span></div>
-            </div>
-
-            <div class="wi">
-                <div><div class="wl">Grab docs via Glob</div><div class="wsl">Use a wildcard to fetch a whole sitemap section.</div></div>
-                <div class="wfc"><span class="cm"># fetch all react hooks, format markdown</span><br>dumpall <span class="op">"</span>https://docs.react.dev/reference/react/use*<span class="op">"</span> <span class="fl">-c</span></div>
-            </div>
+        <div class="grid lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-16 py-8 lg:py-12 border-b border-dim items-start">
+          <div><div class="text-[1.25rem] font-bold text-t1">Feed AI your codebase</div><div class="text-[1.05rem] text-t2 mt-3 leading-[1.5] font-medium">Grab source, exclude noise, clipboard ready.</div></div>
+          <div class="bg-black border border-dim px-5 sm:px-8 py-5 sm:py-6 font-mono text-[0.85rem] sm:text-[1rem] leading-[1.8] text-t1 no-sb overflow-x-auto">
+            <span class="text-t3"># everything in src, skip tests, copy</span><br>dumpall src/ <span class="text-accent">-e</span> "*.test.ts" <span class="text-accent">-c</span>
+          </div>
         </div>
+
+        <div class="grid lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-16 py-8 lg:py-12 border-b border-dim items-start">
+          <div><div class="text-[1.25rem] font-bold text-t1">Mix Everything</div><div class="text-[1.05rem] text-t2 mt-3 leading-[1.5] font-medium">Local code, remote docs, and instructions—one paste.</div></div>
+          <div class="bg-black border border-dim px-5 sm:px-8 py-5 sm:py-6 font-mono text-[0.85rem] sm:text-[1rem] leading-[1.8] text-t1 no-sb overflow-x-auto">
+            <span class="text-t3"># code + docs + interactive prompt</span><br>dumpall src/ https://docs.api.com/auth <span class="text-accent">-m -c</span>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-16 py-8 lg:py-12 border-b border-dim items-start">
+          <div><div class="text-[1.25rem] font-bold text-t1">Debug across files</div><div class="text-[1.05rem] text-t2 mt-3 leading-[1.5] font-medium">Find every file touching an endpoint using inline grep.</div></div>
+          <div class="bg-black border border-dim px-5 sm:px-8 py-5 sm:py-6 font-mono text-[0.85rem] sm:text-[1rem] leading-[1.8] text-t1 no-sb overflow-x-auto">
+            <span class="text-t3"># grep for the pattern, dump matches</span><br>dumpall . <span class="text-[#e06c75]">--grep</span> "/api/users" <span class="text-accent">-c</span>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-16 py-8 lg:py-12 border-b border-dim items-start">
+          <div><div class="text-[1.25rem] font-bold text-t1">Pipe from Git</div><div class="text-[1.05rem] text-t2 mt-3 leading-[1.5] font-medium">Only dump the files changed in your recent commits.</div></div>
+          <div class="bg-black border border-dim px-5 sm:px-8 py-5 sm:py-6 font-mono text-[0.85rem] sm:text-[1rem] leading-[1.8] text-t1 no-sb overflow-x-auto">
+            <span class="text-t3"># last 3 commits → stdin → clipboard</span><br>git diff --name-only HEAD~3 | dumpall <span class="text-accent">--stdin -c</span>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-16 py-8 lg:py-12 border-b border-dim items-start">
+          <div><div class="text-[1.25rem] font-bold text-t1">Browse a private repo</div><div class="text-[1.05rem] text-t2 mt-3 leading-[1.5] font-medium">Authenticate with token, open interactive picker.</div></div>
+          <div class="bg-black border border-dim px-5 sm:px-8 py-5 sm:py-6 font-mono text-[0.85rem] sm:text-[1rem] leading-[1.8] text-t1 no-sb overflow-x-auto">
+            <span class="text-t3"># pass token inline, fuzzy search, copy</span><br>GITHUB_TOKEN=ghp_xxx dumpall github.com/user/priv <span class="text-[#e06c75]">@</span> <span class="text-accent">-c</span>
+          </div>
+        </div>
+
+        <div class="grid lg:grid-cols-[1fr_1.5fr] gap-6 lg:gap-16 py-8 lg:py-12 items-start">
+          <div><div class="text-[1.25rem] font-bold text-t1">Grab docs via Glob</div><div class="text-[1.05rem] text-t2 mt-3 leading-[1.5] font-medium">Use a wildcard to fetch a whole sitemap section.</div></div>
+          <div class="bg-black border border-dim px-5 sm:px-8 py-5 sm:py-6 font-mono text-[0.85rem] sm:text-[1rem] leading-[1.8] text-t1 no-sb overflow-x-auto">
+            <span class="text-t3"># fetch all react hooks, format markdown</span><br>dumpall <span class="text-[#e06c75]">"</span>https://docs.react.dev/reference/react/use*<span class="text-[#e06c75]">"</span> <span class="text-accent">-c</span>
+          </div>
+        </div>
+
+      </div>
     </div>
-</section>
+  </section>
 
 </div>
 
-<footer>
-    <div class="fi">
-        <div class="fl2"><span class="fll">dumpall.</span><span>The universal context compiler.</span><span>MIT License.</span></div>
-        <div class="flk">
-            <a href="https://github.com/ThisIsntMyId/dumpall" target="_blank">GitHub</a>
-            <a href="https://www.npmjs.com/package/dumpall" target="_blank">npm</a>
-        </div>
+<footer class="border-t border-dim py-10 lg:py-12 mt-16 lg:mt-24">
+  <div class="max-w-page mx-auto px-6 lg:px-10 flex flex-col sm:flex-row justify-between items-center gap-6">
+    <div class="font-mono text-[0.85rem] text-t3 flex flex-col sm:flex-row items-center gap-2 sm:gap-6 font-semibold text-center">
+      <span class="font-extrabold text-t2 text-[1rem]">dumpall.</span>
+      <span>The universal context compiler.</span>
+      <span>MIT License.</span>
     </div>
-    <div class="fe">[ 流 / Ryū : Flow State ] &nbsp;·&nbsp; [ 居合 / Iai : Quick Draw ] &nbsp;·&nbsp; [ 簡素 / Kanso : Simplicity ]</div>
+    <div class="flex gap-8">
+      <a href="https://github.com/ThisIsntMyId/dumpall" target="_blank" class="font-mono text-[0.85rem] text-t2 no-underline hover:text-t1 transition-colors font-semibold uppercase tracking-[0.1em]">GitHub</a>
+      <a href="https://www.npmjs.com/package/dumpall"   target="_blank" class="font-mono text-[0.85rem] text-t2 no-underline hover:text-t1 transition-colors font-semibold uppercase tracking-[0.1em]">npm</a>
+    </div>
+  </div>
+  <div class="max-w-page mx-auto px-6 lg:px-10 text-center font-mono text-[0.65rem] text-t3 opacity-60 mt-10 tracking-[0.15em] uppercase">
+    [ 流 / Ryū : Flow State ] &nbsp;·&nbsp; [ 居合 / Iai : Quick Draw ] &nbsp;·&nbsp; [ 簡素 / Kanso : Simplicity ]
+  </div>
 </footer>
 
 <script>
-const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting)x.target.classList.add('vis')})},{threshold:.08});
-document.querySelectorAll('.rv').forEach(el=>obs.observe(el));
+const obs = new IntersectionObserver(e => {
+  e.forEach(x => { if (x.isIntersecting) x.target.classList.add('vis'); });
+}, { threshold: 0.08 });
+document.querySelectorAll('.rv').forEach(el => obs.observe(el));
 </script>
 </body>
 </html>
